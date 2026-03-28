@@ -1,0 +1,9 @@
+{
+    "name": "Hello World",
+    "slug": "hello-world",
+    "version": "1.0.0",
+    "author": "System",
+    "description": "A sample plugin demonstrating the plugin architecture.",
+    "min_crm_version": "1.0.0",
+    "entry_class": "HelloWorld\\HelloWorldPlugin"
+}

@@ -1,0 +1,26 @@
+{
+    "name": "InsulaCRM",
+    "short_name": "InsulaCRM",
+    "description": "Real Estate Wholesaler CRM",
+    "start_url": "./dashboard",
+    "scope": "./",
+    "display": "standalone",
+    "background_color": "#ffffff",
+    "theme_color": "#0054a6",
+    "orientation": "any",
+    "categories": ["business", "productivity"],
+    "icons": [
+        {
+            "src": "./img/icon-192.png",
+            "sizes": "192x192",
+            "type": "image/png",
+            "purpose": "any maskable"
+        },
+        {
+            "src": "./img/icon-512.png",
+            "sizes": "512x512",
+            "type": "image/png",
+            "purpose": "any maskable"
+        }
+    ]
+}

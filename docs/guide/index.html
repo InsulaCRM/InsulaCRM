@@ -1,0 +1,175 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Documentation | InsulaCRM</title>
+    <style>
+        :root {
+            color-scheme: light;
+            --bg: #f4f1ea;
+            --surface: #ffffff;
+            --border: #d6cec0;
+            --text: #1f1e1a;
+            --muted: #6c675d;
+            --accent: #0f5b6d;
+            --accent-soft: #dff1f5;
+            --code-bg: #f7f7f8;
+        }
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            font-family: Georgia, "Times New Roman", serif;
+            background: linear-gradient(180deg, #f8f5ef 0%, var(--bg) 100%);
+            color: var(--text);
+            line-height: 1.65;
+        }
+        .layout {
+            display: grid;
+            grid-template-columns: 280px minmax(0, 1fr);
+            min-height: 100vh;
+        }
+        .sidebar {
+            background: #12343b;
+            color: #f4f4f1;
+            padding: 32px 24px;
+            position: sticky;
+            top: 0;
+            align-self: start;
+            min-height: 100vh;
+        }
+        .sidebar h1 {
+            font-size: 1.25rem;
+            margin: 0 0 8px;
+            font-family: "Segoe UI", sans-serif;
+        }
+        .sidebar p {
+            margin: 0 0 24px;
+            color: #c9dcde;
+            font-size: 0.95rem;
+            font-family: "Segoe UI", sans-serif;
+        }
+        .sidebar ul {
+            list-style: none;
+            margin: 0;
+            padding: 0;
+            display: grid;
+            gap: 10px;
+        }
+        .sidebar a {
+            display: block;
+            text-decoration: none;
+            color: #eef7f8;
+            padding: 10px 12px;
+            border-radius: 10px;
+            font-family: "Segoe UI", sans-serif;
+            transition: background-color 0.15s ease;
+        }
+        .sidebar a:hover,
+        .sidebar a.active {
+            background: rgba(255,255,255,0.12);
+        }
+        .content {
+            padding: 40px 48px 56px;
+        }
+        .article {
+            max-width: 980px;
+            margin: 0 auto;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            padding: 40px 44px;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.06);
+        }
+        h1, h2, h3, h4 {
+            line-height: 1.2;
+            color: #132026;
+        }
+        h1 { font-size: 2.2rem; margin-top: 0; }
+        h2 {
+            font-size: 1.5rem;
+            margin-top: 2.4rem;
+            padding-top: 0.4rem;
+            border-top: 1px solid #ece4d6;
+        }
+        h3 { font-size: 1.18rem; margin-top: 1.6rem; }
+        p, li { font-size: 1rem; }
+        a { color: var(--accent); }
+        code {
+            font-family: Consolas, Monaco, monospace;
+            background: var(--code-bg);
+            padding: 0.12rem 0.35rem;
+            border-radius: 4px;
+            font-size: 0.94em;
+        }
+        pre {
+            background: #0f1720;
+            color: #f8fafc;
+            padding: 16px;
+            border-radius: 12px;
+            overflow-x: auto;
+            font-size: 0.92rem;
+        }
+        pre code {
+            background: transparent;
+            padding: 0;
+            color: inherit;
+        }
+        blockquote {
+            margin: 1.5rem 0;
+            padding: 0.8rem 1rem;
+            border-left: 4px solid var(--accent);
+            background: var(--accent-soft);
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 1.5rem 0;
+            font-size: 0.96rem;
+        }
+        th, td {
+            border: 1px solid var(--border);
+            padding: 10px 12px;
+            text-align: left;
+            vertical-align: top;
+        }
+        th {
+            background: #f5efe2;
+            font-family: "Segoe UI", sans-serif;
+        }
+        hr {
+            border: 0;
+            border-top: 1px solid var(--border);
+            margin: 2rem 0;
+        }
+        @media (max-width: 960px) {
+            .layout { grid-template-columns: 1fr; }
+            .sidebar {
+                position: static;
+                min-height: auto;
+            }
+            .content {
+                padding: 20px;
+            }
+            .article {
+                padding: 24px 20px;
+                border-radius: 16px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="layout">
+        <aside class="sidebar">
+            <h1>InsulaCRM Docs</h1>
+            <p>Documentation included with this release.</p>
+            <ul><li><a href="index.html" class="active">Documentation Home</a></li><li><a href="overview.html">Overview</a></li><li><a href="installation-guide.html">Installation Guide</a></li><li><a href="upgrade-guide.html">Upgrade Guide</a></li><li><a href="changelog.html">Changelog</a></li><li><a href="plugin-development.html">Plugin Development</a></li><li><a href="credits.html">Credits</a></li></ul>
+        </aside>
+        <main class="content">
+            <article class="article markdown-body">
+                <h1>InsulaCRM Documentation</h1><p>Use the links in the sidebar to browse the documentation included with this release.</p>
+            </article>
+        </main>
+    </div>
+</body>
+</html>

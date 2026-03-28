@@ -1,0 +1,28 @@
+* text=auto eol=lf
+
+*.blade.php diff=html
+*.css diff=css
+*.html diff=html
+*.md diff=markdown
+*.php diff=php
+
+/.github export-ignore
+.claude/ export-ignore
+.styleci.yml export-ignore
+.editorconfig export-ignore
+.env export-ignore
+.env.example !export-ignore
+.phpunit.result.cache export-ignore
+phpunit.xml export-ignore
+vite.config.js export-ignore
+package.json export-ignore
+package-lock.json export-ignore
+node_modules/ export-ignore
+tests/ export-ignore
+test-output.txt export-ignore
+storage/logs/* export-ignore
+storage/app/backups/* export-ignore
+storage/installed.lock export-ignore
+storage/framework/cache/data/* export-ignore
+storage/framework/sessions/* export-ignore
+storage/framework/views/* export-ignore

@@ -1,0 +1,320 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Third-Party Credits and Licenses | InsulaCRM</title>
+    <style>
+        :root {
+            color-scheme: light;
+            --bg: #f4f1ea;
+            --surface: #ffffff;
+            --border: #d6cec0;
+            --text: #1f1e1a;
+            --muted: #6c675d;
+            --accent: #0f5b6d;
+            --accent-soft: #dff1f5;
+            --code-bg: #f7f7f8;
+        }
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            font-family: Georgia, "Times New Roman", serif;
+            background: linear-gradient(180deg, #f8f5ef 0%, var(--bg) 100%);
+            color: var(--text);
+            line-height: 1.65;
+        }
+        .layout {
+            display: grid;
+            grid-template-columns: 280px minmax(0, 1fr);
+            min-height: 100vh;
+        }
+        .sidebar {
+            background: #12343b;
+            color: #f4f4f1;
+            padding: 32px 24px;
+            position: sticky;
+            top: 0;
+            align-self: start;
+            min-height: 100vh;
+        }
+        .sidebar h1 {
+            font-size: 1.25rem;
+            margin: 0 0 8px;
+            font-family: "Segoe UI", sans-serif;
+        }
+        .sidebar p {
+            margin: 0 0 24px;
+            color: #c9dcde;
+            font-size: 0.95rem;
+            font-family: "Segoe UI", sans-serif;
+        }
+        .sidebar ul {
+            list-style: none;
+            margin: 0;
+            padding: 0;
+            display: grid;
+            gap: 10px;
+        }
+        .sidebar a {
+            display: block;
+            text-decoration: none;
+            color: #eef7f8;
+            padding: 10px 12px;
+            border-radius: 10px;
+            font-family: "Segoe UI", sans-serif;
+            transition: background-color 0.15s ease;
+        }
+        .sidebar a:hover,
+        .sidebar a.active {
+            background: rgba(255,255,255,0.12);
+        }
+        .content {
+            padding: 40px 48px 56px;
+        }
+        .article {
+            max-width: 980px;
+            margin: 0 auto;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            padding: 40px 44px;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.06);
+        }
+        h1, h2, h3, h4 {
+            line-height: 1.2;
+            color: #132026;
+        }
+        h1 { font-size: 2.2rem; margin-top: 0; }
+        h2 {
+            font-size: 1.5rem;
+            margin-top: 2.4rem;
+            padding-top: 0.4rem;
+            border-top: 1px solid #ece4d6;
+        }
+        h3 { font-size: 1.18rem; margin-top: 1.6rem; }
+        p, li { font-size: 1rem; }
+        a { color: var(--accent); }
+        code {
+            font-family: Consolas, Monaco, monospace;
+            background: var(--code-bg);
+            padding: 0.12rem 0.35rem;
+            border-radius: 4px;
+            font-size: 0.94em;
+        }
+        pre {
+            background: #0f1720;
+            color: #f8fafc;
+            padding: 16px;
+            border-radius: 12px;
+            overflow-x: auto;
+            font-size: 0.92rem;
+        }
+        pre code {
+            background: transparent;
+            padding: 0;
+            color: inherit;
+        }
+        blockquote {
+            margin: 1.5rem 0;
+            padding: 0.8rem 1rem;
+            border-left: 4px solid var(--accent);
+            background: var(--accent-soft);
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 1.5rem 0;
+            font-size: 0.96rem;
+        }
+        th, td {
+            border: 1px solid var(--border);
+            padding: 10px 12px;
+            text-align: left;
+            vertical-align: top;
+        }
+        th {
+            background: #f5efe2;
+            font-family: "Segoe UI", sans-serif;
+        }
+        hr {
+            border: 0;
+            border-top: 1px solid var(--border);
+            margin: 2rem 0;
+        }
+        @media (max-width: 960px) {
+            .layout { grid-template-columns: 1fr; }
+            .sidebar {
+                position: static;
+                min-height: auto;
+            }
+            .content {
+                padding: 20px;
+            }
+            .article {
+                padding: 24px 20px;
+                border-radius: 16px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="layout">
+        <aside class="sidebar">
+            <h1>InsulaCRM Docs</h1>
+            <p>Documentation included with this release.</p>
+            <ul><li><a href="index.html">Documentation Home</a></li><li><a href="overview.html">Overview</a></li><li><a href="installation-guide.html">Installation Guide</a></li><li><a href="upgrade-guide.html">Upgrade Guide</a></li><li><a href="changelog.html">Changelog</a></li><li><a href="plugin-development.html">Plugin Development</a></li><li><a href="credits.html" class="active">Credits</a></li></ul>
+        </aside>
+        <main class="content">
+            <article class="article markdown-body">
+                <h1>Third-Party Credits and Licenses</h1>
+<p>InsulaCRM bundles or depends on the third-party software listed below.</p>
+<h2>PHP Dependencies</h2>
+<table>
+<thead>
+<tr>
+<th>Package</th>
+<th>Version</th>
+<th>License</th>
+<th>URL</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>laravel/framework</td>
+<td>^12.0</td>
+<td>MIT</td>
+<td><a href="https://laravel.com">https://laravel.com</a></td>
+</tr>
+<tr>
+<td>laravel/tinker</td>
+<td>^2.10.1</td>
+<td>MIT</td>
+<td><a href="https://github.com/laravel/tinker">https://github.com/laravel/tinker</a></td>
+</tr>
+<tr>
+<td>league/flysystem-aws-s3-v3</td>
+<td>^3.30</td>
+<td>MIT</td>
+<td><a href="https://github.com/thephpleague/flysystem-aws-s3-v3">https://github.com/thephpleague/flysystem-aws-s3-v3</a></td>
+</tr>
+<tr>
+<td>aws/aws-sdk-php</td>
+<td>3.x (transitive)</td>
+<td>Apache-2.0</td>
+<td><a href="https://github.com/aws/aws-sdk-php">https://github.com/aws/aws-sdk-php</a></td>
+</tr>
+</tbody>
+</table>
+<h2>JavaScript Build Dependencies</h2>
+<p>These tools are used during development and asset compilation.</p>
+<table>
+<thead>
+<tr>
+<th>Package</th>
+<th>Version</th>
+<th>License</th>
+<th>URL</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>vite</td>
+<td>^7.0.7</td>
+<td>MIT</td>
+<td><a href="https://vitejs.dev">https://vitejs.dev</a></td>
+</tr>
+<tr>
+<td>laravel-vite-plugin</td>
+<td>^2.0.0</td>
+<td>MIT</td>
+<td><a href="https://github.com/laravel/vite-plugin">https://github.com/laravel/vite-plugin</a></td>
+</tr>
+<tr>
+<td>tailwindcss</td>
+<td>^4.0.0</td>
+<td>MIT</td>
+<td><a href="https://tailwindcss.com">https://tailwindcss.com</a></td>
+</tr>
+<tr>
+<td>@tailwindcss/vite</td>
+<td>^4.0.0</td>
+<td>MIT</td>
+<td><a href="https://github.com/tailwindlabs/tailwindcss">https://github.com/tailwindlabs/tailwindcss</a></td>
+</tr>
+<tr>
+<td>axios</td>
+<td>^1.11.0</td>
+<td>MIT</td>
+<td><a href="https://axios-http.com">https://axios-http.com</a></td>
+</tr>
+<tr>
+<td>concurrently</td>
+<td>^9.0.1</td>
+<td>MIT</td>
+<td><a href="https://github.com/open-cli-tools/concurrently">https://github.com/open-cli-tools/concurrently</a></td>
+</tr>
+</tbody>
+</table>
+<h2>Bundled Frontend Libraries</h2>
+<table>
+<thead>
+<tr>
+<th>Library</th>
+<th>Version</th>
+<th>License</th>
+<th>URL</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Tabler UI Kit</td>
+<td>v1.0.0-beta20</td>
+<td>MIT</td>
+<td><a href="https://tabler.io">https://tabler.io</a></td>
+</tr>
+<tr>
+<td>Tabler Icons</td>
+<td>bundled with Tabler</td>
+<td>MIT</td>
+<td><a href="https://tabler-icons.io">https://tabler-icons.io</a></td>
+</tr>
+<tr>
+<td>ApexCharts</td>
+<td>v3.44.0</td>
+<td>MIT</td>
+<td><a href="https://apexcharts.com">https://apexcharts.com</a></td>
+</tr>
+</tbody>
+</table>
+<h2>Fonts</h2>
+<table>
+<thead>
+<tr>
+<th>Asset</th>
+<th>License</th>
+<th>URL</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Instrument Sans (served via Bunny Fonts)</td>
+<td>SIL Open Font License 1.1</td>
+<td><a href="https://fonts.bunny.net">https://fonts.bunny.net</a></td>
+</tr>
+</tbody>
+</table>
+<h2>Images and Branding</h2>
+<p>Application branding assets included with InsulaCRM are original works created for the product unless otherwise noted in the packaged documentation.</p>
+<h2>License Compatibility Notes</h2>
+<ul>
+<li>No GPL-only or AGPL dependencies are intentionally bundled with the application.</li>
+<li>Composer and npm transitive dependencies are resolved through their respective lockfiles.</li>
+<li>Users are responsible for complying with the licenses of any third-party services they connect to InsulaCRM, such as OpenAI, Anthropic, Google, AWS, Twilio, or other external providers.</li>
+</ul>
+
+            </article>
+        </main>
+    </div>
+</body>
+</html>

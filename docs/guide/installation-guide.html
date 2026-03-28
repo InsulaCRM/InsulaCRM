@@ -1,0 +1,934 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>InsulaCRM - Installation Guide | InsulaCRM</title>
+    <style>
+        :root {
+            color-scheme: light;
+            --bg: #f4f1ea;
+            --surface: #ffffff;
+            --border: #d6cec0;
+            --text: #1f1e1a;
+            --muted: #6c675d;
+            --accent: #0f5b6d;
+            --accent-soft: #dff1f5;
+            --code-bg: #f7f7f8;
+        }
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            font-family: Georgia, "Times New Roman", serif;
+            background: linear-gradient(180deg, #f8f5ef 0%, var(--bg) 100%);
+            color: var(--text);
+            line-height: 1.65;
+        }
+        .layout {
+            display: grid;
+            grid-template-columns: 280px minmax(0, 1fr);
+            min-height: 100vh;
+        }
+        .sidebar {
+            background: #12343b;
+            color: #f4f4f1;
+            padding: 32px 24px;
+            position: sticky;
+            top: 0;
+            align-self: start;
+            min-height: 100vh;
+        }
+        .sidebar h1 {
+            font-size: 1.25rem;
+            margin: 0 0 8px;
+            font-family: "Segoe UI", sans-serif;
+        }
+        .sidebar p {
+            margin: 0 0 24px;
+            color: #c9dcde;
+            font-size: 0.95rem;
+            font-family: "Segoe UI", sans-serif;
+        }
+        .sidebar ul {
+            list-style: none;
+            margin: 0;
+            padding: 0;
+            display: grid;
+            gap: 10px;
+        }
+        .sidebar a {
+            display: block;
+            text-decoration: none;
+            color: #eef7f8;
+            padding: 10px 12px;
+            border-radius: 10px;
+            font-family: "Segoe UI", sans-serif;
+            transition: background-color 0.15s ease;
+        }
+        .sidebar a:hover,
+        .sidebar a.active {
+            background: rgba(255,255,255,0.12);
+        }
+        .content {
+            padding: 40px 48px 56px;
+        }
+        .article {
+            max-width: 980px;
+            margin: 0 auto;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            padding: 40px 44px;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.06);
+        }
+        h1, h2, h3, h4 {
+            line-height: 1.2;
+            color: #132026;
+        }
+        h1 { font-size: 2.2rem; margin-top: 0; }
+        h2 {
+            font-size: 1.5rem;
+            margin-top: 2.4rem;
+            padding-top: 0.4rem;
+            border-top: 1px solid #ece4d6;
+        }
+        h3 { font-size: 1.18rem; margin-top: 1.6rem; }
+        p, li { font-size: 1rem; }
+        a { color: var(--accent); }
+        code {
+            font-family: Consolas, Monaco, monospace;
+            background: var(--code-bg);
+            padding: 0.12rem 0.35rem;
+            border-radius: 4px;
+            font-size: 0.94em;
+        }
+        pre {
+            background: #0f1720;
+            color: #f8fafc;
+            padding: 16px;
+            border-radius: 12px;
+            overflow-x: auto;
+            font-size: 0.92rem;
+        }
+        pre code {
+            background: transparent;
+            padding: 0;
+            color: inherit;
+        }
+        blockquote {
+            margin: 1.5rem 0;
+            padding: 0.8rem 1rem;
+            border-left: 4px solid var(--accent);
+            background: var(--accent-soft);
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 1.5rem 0;
+            font-size: 0.96rem;
+        }
+        th, td {
+            border: 1px solid var(--border);
+            padding: 10px 12px;
+            text-align: left;
+            vertical-align: top;
+        }
+        th {
+            background: #f5efe2;
+            font-family: "Segoe UI", sans-serif;
+        }
+        hr {
+            border: 0;
+            border-top: 1px solid var(--border);
+            margin: 2rem 0;
+        }
+        @media (max-width: 960px) {
+            .layout { grid-template-columns: 1fr; }
+            .sidebar {
+                position: static;
+                min-height: auto;
+            }
+            .content {
+                padding: 20px;
+            }
+            .article {
+                padding: 24px 20px;
+                border-radius: 16px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="layout">
+        <aside class="sidebar">
+            <h1>InsulaCRM Docs</h1>
+            <p>Documentation included with this release.</p>
+            <ul><li><a href="index.html">Documentation Home</a></li><li><a href="overview.html">Overview</a></li><li><a href="installation-guide.html" class="active">Installation Guide</a></li><li><a href="upgrade-guide.html">Upgrade Guide</a></li><li><a href="changelog.html">Changelog</a></li><li><a href="plugin-development.html">Plugin Development</a></li><li><a href="credits.html">Credits</a></li></ul>
+        </aside>
+        <main class="content">
+            <article class="article markdown-body">
+                <h1>InsulaCRM - Installation Guide</h1>
+<p>This guide covers everything you need to install and configure InsulaCRM on your server. Four installation methods are provided: a guided web installer, a supported Linux shell installer, a manual CLI setup, and Docker.</p>
+<hr />
+<h2>Table of Contents</h2>
+<ol>
+<li><a href="#server-requirements">Server Requirements</a></li>
+<li><a href="#method-1-web-installer-recommended">Installation Method 1: Web Installer (Recommended)</a></li>
+<li><a href="#method-2-supported-linux-shell-installer">Installation Method 2: Supported Linux Shell Installer</a></li>
+<li><a href="#method-3-manual-cli-install">Installation Method 3: Manual CLI Install</a></li>
+<li><a href="#method-4-docker">Installation Method 4: Docker</a></li>
+<li><a href="#web-server-configuration">Web Server Configuration</a>
+<ul>
+<li><a href="#deployment-modes">Deployment Modes</a></li>
+<li><a href="#apache-virtual-host">Apache Virtual Host</a></li>
+<li><a href="#apache-subfolder-alias">Apache Subfolder Alias</a></li>
+<li><a href="#shared-hosting--no-vhost-access">Shared Hosting / No VHost Access</a></li>
+<li><a href="#nginx-server-block">Nginx Server Block</a></li>
+</ul>
+</li>
+<li><a href="#cron-job-setup">Cron Job Setup</a></li>
+<li><a href="#queue-worker-setup">Queue Worker Setup</a></li>
+<li><a href="#s3-storage-optional">S3 Storage (Optional)</a></li>
+<li><a href="#smtp--email-optional">SMTP / Email (Optional)</a></li>
+<li><a href="#troubleshooting">Troubleshooting</a></li>
+<li><a href="#upgrading">Upgrading</a></li>
+<li><a href="#demo-credentials">Demo Credentials</a></li>
+</ol>
+<hr />
+<h2>Deployment Model</h2>
+<p>InsulaCRM is designed for <strong>self-hosted, owner-controlled deployments</strong>. Each installation should represent a single organization where the admin user is the server owner or their trusted delegate.</p>
+<p>Administrative features — plugin installation, in-app updates, snapshot restore, and language file editing — operate on the entire application installation. This is intentional: the admin controls their own server.</p>
+<p>InsulaCRM is <strong>not designed for shared multi-tenant SaaS deployments</strong> where unrelated organizations share one application instance. In that architecture, admin-level operations would cross trust boundaries between organizations.</p>
+<hr />
+<h2>Server Requirements</h2>
+<p>Before installing InsulaCRM, verify that your server meets the following minimum requirements.</p>
+<h3>PHP</h3>
+<ul>
+<li><strong>PHP 8.2 or higher</strong></li>
+<li>Required extensions:
+<ul>
+<li>BCMath</li>
+<li>Ctype</li>
+<li>cURL</li>
+<li>DOM</li>
+<li>Fileinfo</li>
+<li>JSON</li>
+<li>Mbstring</li>
+<li>OpenSSL</li>
+<li>PDO (with MySQL driver)</li>
+<li>Tokenizer</li>
+<li>XML</li>
+<li>GD</li>
+</ul>
+</li>
+</ul>
+<p>Most hosting providers and standard PHP installations include these extensions by default. You can verify installed extensions by running:</p>
+<pre><code class="language-bash">php -m
+</code></pre>
+<p>Or create a temporary <code>phpinfo.php</code> file in your web root:</p>
+<pre><code class="language-php">&lt;?php phpinfo();
+</code></pre>
+<h3>Database</h3>
+<p>One of the following:</p>
+<ul>
+<li><strong>MySQL 8.0+</strong> (recommended)</li>
+<li><strong>MariaDB 10.6+</strong></li>
+</ul>
+<h3>Web Server</h3>
+<ul>
+<li><strong>Apache</strong> with <code>mod_rewrite</code> enabled, OR</li>
+<li><strong>Nginx</strong></li>
+</ul>
+<h3>Build Tools</h3>
+<ul>
+<li><strong>Composer 2.x</strong> -- <a href="https://getcomposer.org">https://getcomposer.org</a> (optional for the standard packaged install, required only if you want to reinstall PHP dependencies or deploy from source)</li>
+<li><strong>Node.js 18+</strong> and <strong>npm</strong> -- <a href="https://nodejs.org">https://nodejs.org</a> (optional, only needed if you plan to modify front-end assets or use the development workflow)</li>
+</ul>
+<hr />
+<h2>Method 1: Web Installer (Recommended)</h2>
+<p>The web installer is the easiest way to get InsulaCRM running. The packaged release already includes the production <code>vendor/</code> directory, so no Composer or Node.js step is required for a standard install.</p>
+<p>Before you upload the package, decide which deployment mode you are using:</p>
+<ul>
+<li><strong>Recommended:</strong> point the root domain or subdomain document root directly at <code>public/</code>. This is the simplest and preferred deployment path.</li>
+<li><strong>Supported for advanced users:</strong> keep the package in a folder such as <code>/public_html/demo</code> and expose it at <code>/demo</code>. This may require Apache or Nginx alias/rewrite configuration depending on the hosting environment.</li>
+<li><strong>Shared hosting fallback:</strong> use the included project-root <code>index.php</code> and <code>.htaccess</code> when you cannot change the document root, but the server must still route requests into the Laravel entrypoint correctly.</li>
+</ul>
+<h3>Step-by-Step</h3>
+<ol>
+<li>
+<p><strong>Upload files to your server.</strong></p>
+<p>Extract the InsulaCRM archive and upload all files to your desired directory on the server (for example, <code>/var/www/insulacrm</code>).</p>
+</li>
+<li>
+<p><strong>Choose the correct web-root strategy.</strong></p>
+<p>The recommended production setup is to point your web server's document root to the <code>public/</code> folder inside the project, not the project root.</p>
+<p>If you must install into a subfolder such as <code>/demo</code>, <code>/crm</code>, or <code>/abc</code>, follow the dedicated examples in <a href="#web-server-configuration">Web Server Configuration</a> below. Subfolder installs are supported, but they are an advanced deployment mode and may require server-level configuration. The package includes a project-root <code>index.php</code> and root <code>.htaccess</code> for shared-hosting deployments where the host serves the project root directly.</p>
+</li>
+<li>
+<p><strong>Open your browser and navigate to your domain.</strong></p>
+<p>The installer will launch automatically and guide you through five steps:</p>
+<ul>
+<li>
+<p><strong>Step 1 -- Requirements Check</strong>
+The installer verifies PHP version, required extensions, <code>.env</code> availability, MySQL PDO support, writable directories, and the detected install URL. Any issues are listed with instructions to resolve them.</p>
+</li>
+<li>
+<p><strong>Step 2 -- Database Configuration</strong>
+Enter the existing database host, port, name, username, and password assigned to you by your hosting panel or server administrator. Automatic database-user creation is available as an advanced option for MariaDB administrator accounts on VPS or dedicated servers.</p>
+</li>
+<li>
+<p><strong>Step 3 -- Company Name and Admin Account</strong>
+Provide your company name and create the initial administrator account (name, email, and password).</p>
+</li>
+<li>
+<p><strong>Step 4 -- Migration</strong>
+Database tables are created automatically. This step runs without any input required from you.</p>
+</li>
+<li>
+<p><strong>Step 5 -- Success</strong>
+Installation is complete. A link to the login page is displayed.</p>
+</li>
+</ul>
+</li>
+<li>
+<p><strong>Optional: Load demo data.</strong></p>
+<p>During the installation wizard, you can check the <strong>&quot;Load demo data&quot;</strong> option. This populates your instance with sample records so you can explore the system immediately:</p>
+<ul>
+<li>200 leads</li>
+<li>50 deals</li>
+<li>20 buyers</li>
+<li>6 users (see <a href="#demo-credentials">Demo Credentials</a> below)</li>
+</ul>
+<p>Demo data is optional. If sample data cannot be loaded, the base CRM installation can still complete.</p>
+</li>
+<li>
+<p><strong>Log in and start using InsulaCRM.</strong></p>
+</li>
+</ol>
+<hr />
+<h2>Method 2: Supported Linux Shell Installer</h2>
+<p>Use this method on supported Linux servers where you have SSH access and want a guided terminal workflow. The included script targets the common VPS / Virtualmin path and then hands off to the product-side CLI installer.</p>
+<h3>1. Upload and Extract the Release</h3>
+<p>Upload the InsulaCRM release to your server and extract it into the target directory.</p>
+<h3>2. Make the Script Executable</h3>
+<pre><code class="language-bash">chmod +x scripts/install.sh
+</code></pre>
+<h3>3. Run the Installer</h3>
+<pre><code class="language-bash">./scripts/install.sh
+</code></pre>
+<p>The script will:</p>
+<ul>
+<li>create <code>.env</code> from <code>.env.example</code> if needed</li>
+<li>prompt for the app URL, company, admin account, and database credentials</li>
+<li>write those values into <code>.env</code></li>
+<li>apply the standard writable-path permissions for <code>storage/</code>, <code>bootstrap/cache/</code>, and <code>plugins/</code></li>
+<li>run <code>php artisan app:install</code></li>
+<li>run <code>php artisan system:doctor</code> at the end</li>
+</ul>
+<h3>4. Finish the Server Setup</h3>
+<p>After the script completes, point your web root at <code>public/</code>, add the Laravel scheduler cron entry, and start a queue worker for background jobs.</p>
+<h3>5. Troubleshoot if Needed</h3>
+<p>If the shell installer reports a problem, run:</p>
+<pre><code class="language-bash">php artisan system:doctor --strict
+</code></pre>
+<p>Then continue with the manual CLI method below if you need to inspect or rerun any step yourself.</p>
+<hr />
+<h2>Method 3: Manual CLI Install</h2>
+<p>Use this method if you have SSH access to your server and prefer working from the command line.</p>
+<h3>1. Upload and Extract Files</h3>
+<p>Upload the InsulaCRM archive to your server and extract it:</p>
+<pre><code class="language-bash">cd /var/www
+unzip insulacrm.zip -d insulacrm
+cd insulacrm
+</code></pre>
+<h3>2. Install PHP Dependencies (Optional)</h3>
+<p>If you are deploying from source or intentionally rebuilding dependencies, run:</p>
+<pre><code class="language-bash">composer install --optimize-autoloader --no-dev
+</code></pre>
+<p>The packaged release already includes the runtime dependencies required for both the core installer and optional demo data. Composer is only required when you intentionally rebuild dependencies or deploy from source.</p>
+<h3>3. Configure Environment</h3>
+<p>If you want a guided CLI flow instead of running each step manually, you can stop after editing <code>.env</code> and run <code>php artisan app:install</code>. The remaining manual steps below show what that command automates.</p>
+<p>Copy the example environment file and generate an application key:</p>
+<p>Copy the example environment file and generate an application key:</p>
+<pre><code class="language-bash">cp .env.example .env
+php artisan key:generate
+</code></pre>
+<h3>4. Edit the .env File</h3>
+<p>Open <code>.env</code> in a text editor and set your database credentials:</p>
+<pre><code class="language-dotenv">APP_NAME=InsulaCRM
+APP_URL=https://your-domain.com
+
+DB_CONNECTION=mysql
+DB_HOST=127.0.0.1
+DB_PORT=3306
+DB_DATABASE=insulacrm
+DB_USERNAME=your_db_user
+DB_PASSWORD=your_db_password
+</code></pre>
+<h3>5. Run Migrations</h3>
+<pre><code class="language-bash">php artisan migrate
+</code></pre>
+<h3>6. Seed Required Data</h3>
+<p>Seed the essential roles and permissions:</p>
+<pre><code class="language-bash">php artisan db:seed --class=Database\\Seeders\\BaseSeeder
+</code></pre>
+<h3>7. Seed Demo Data (Optional)</h3>
+<p>To load sample data for testing and exploration:</p>
+<pre><code class="language-bash">php artisan db:seed
+</code></pre>
+<h3>8. Create the Storage Symlink</h3>
+<pre><code class="language-bash">php artisan storage:link
+</code></pre>
+<h3>9. Set Directory Permissions</h3>
+<p>The web server must be able to write to the <code>storage/</code> and <code>bootstrap/cache/</code> directories:</p>
+<pre><code class="language-bash">chmod -R 775 storage/
+chmod -R 775 bootstrap/cache/
+chown -R www-data:www-data storage/ bootstrap/cache/
+</code></pre>
+<p>Replace <code>www-data</code> with the user your web server runs as (for example, <code>nginx</code>, <code>apache</code>, or <code>http</code>). On Linux XAMPP installs under <code>/opt/lampp</code>, Apache commonly runs as <code>daemon</code>, so for local testing you can use <code>chmod 666 .env</code> and <code>chmod -R 777 storage bootstrap/cache plugins</code> instead.</p>
+<h3>10. Run a Health Check</h3>
+<p>Use the built-in doctor command to confirm the instance is ready:</p>
+<pre><code class="language-bash">php artisan system:doctor
+</code></pre>
+<h3>11. Point Your Web Root</h3>
+<p>Configure your web server to serve the <code>public/</code> directory as the document root. See <a href="#web-server-configuration">Web Server Configuration</a> below.</p>
+<hr />
+<h2>Method 4: Docker</h2>
+<p>A Docker setup is included for quick local development or containerized deployments.</p>
+<h3>1. Start the Containers</h3>
+<p>From the project root directory, run:</p>
+<pre><code class="language-bash">docker-compose up -d
+</code></pre>
+<p>This starts four services:</p>
+<table>
+<thead>
+<tr>
+<th>Service</th>
+<th>Description</th>
+<th>Exposed Port</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>PHP-FPM</td>
+<td>Application runtime</td>
+<td>(internal)</td>
+</tr>
+<tr>
+<td>Nginx</td>
+<td>Web server</td>
+<td><strong>8080</strong></td>
+</tr>
+<tr>
+<td>MySQL</td>
+<td>MySQL 8.0 database</td>
+<td>3306</td>
+</tr>
+<tr>
+<td>Redis</td>
+<td>Cache and queues</td>
+<td>6379</td>
+</tr>
+</tbody>
+</table>
+<h3>2. Access InsulaCRM</h3>
+<p>Open your browser and navigate to:</p>
+<pre><code>http://localhost:8080
+</code></pre>
+<p>The web installer will appear on first run. Follow the steps described in <a href="#method-1-web-installer-recommended">Method 1</a>.</p>
+<h3>3. Stopping the Containers</h3>
+<pre><code class="language-bash">docker-compose down
+</code></pre>
+<p>To also remove volumes (including database data):</p>
+<pre><code class="language-bash">docker-compose down -v
+</code></pre>
+<hr />
+<h2>Web Server Configuration</h2>
+<h3>Deployment Modes</h3>
+<p>InsulaCRM supports three deployment patterns:</p>
+<ol>
+<li>
+<p><strong>Root domain or subdomain</strong>
+Example: <code>https://crm.example.com</code>
+Best option. Point the vhost/server block directly at <code>/path/to/insulacrm/public</code>.</p>
+</li>
+<li>
+<p><strong>Subfolder install</strong>
+Example: <code>https://example.com/demo</code>
+Supported, but the web server must map <code>/demo</code> cleanly into the project without forcing <code>/public</code> into the final URL.</p>
+</li>
+<li>
+<p><strong>Shared hosting fallback</strong>
+Example: upload the package to <code>/public_html/demo</code>
+If you cannot edit Apache/Nginx vhosts, use the included root <code>index.php</code> and root <code>.htaccess</code>. This is less ideal than a proper document root, but it is supported for packaged deployments and is designed to survive normal file-replacement redeploys.</p>
+</li>
+</ol>
+<h3>Apache Virtual Host</h3>
+<p>Ensure <code>mod_rewrite</code> is enabled:</p>
+<pre><code class="language-bash">sudo a2enmod rewrite
+sudo systemctl restart apache2
+</code></pre>
+<p>Create or edit a virtual host configuration file (for example, <code>/etc/apache2/sites-available/insulacrm.conf</code>):</p>
+<pre><code class="language-apache">&lt;VirtualHost *:80&gt;
+    ServerName your-domain.com
+    ServerAlias www.your-domain.com
+
+    DocumentRoot /var/www/insulacrm/public
+
+    &lt;Directory /var/www/insulacrm/public&gt;
+        AllowOverride All
+        Require all granted
+
+        Options -Indexes +FollowSymLinks
+    &lt;/Directory&gt;
+
+    ErrorLog ${APACHE_LOG_DIR}/insulacrm-error.log
+    CustomLog ${APACHE_LOG_DIR}/insulacrm-access.log combined
+&lt;/VirtualHost&gt;
+</code></pre>
+<p>Enable the site and restart Apache:</p>
+<pre><code class="language-bash">sudo a2ensite insulacrm.conf
+sudo systemctl restart apache2
+</code></pre>
+<h3>Apache Subfolder Alias</h3>
+<p>Use this when the app must live at a path such as <code>/demo</code> instead of the domain root.</p>
+<pre><code class="language-apache">Alias /demo /var/www/insulacrm/public
+
+&lt;Directory /var/www/insulacrm/public&gt;
+    AllowOverride All
+    Require all granted
+    Options -Indexes +FollowSymLinks
+&lt;/Directory&gt;
+</code></pre>
+<p>If you are intentionally serving the full project directory at <code>/demo</code> on shared hosting instead of aliasing <code>public/</code>, upload the package into that folder and let the included root <code>.htaccess</code> and <code>index.php</code> route requests into <code>public/</code>.</p>
+<p>Important notes for subfolder installs:</p>
+<ul>
+<li>Visit the app as <code>https://example.com/demo</code>, not <code>https://example.com/demo/public</code></li>
+<li>The installer will auto-detect and save <code>APP_URL</code> with the <code>/demo</code> suffix</li>
+<li>Static assets must resolve from <code>/demo/...</code>, not <code>/demo/public/...</code></li>
+<li>Re-uploading a newer package into the same folder should not require reapplying custom app-side rewrite rules</li>
+<li>If you see redirect loops or <code>404</code> responses before the installer loads, your web server is still pointing at the wrong path</li>
+</ul>
+<h3>Shared Hosting / No VHost Access</h3>
+<p>This is the simplest low-friction path when the host only lets you upload files into a folder.</p>
+<ol>
+<li>Upload the package contents into a folder such as <code>public_html/demo</code></li>
+<li>Keep the supplied root <code>.htaccess</code> and root <code>index.php</code> in place</li>
+<li>Browse to <code>https://example.com/demo/install</code></li>
+<li>Complete the installer</li>
+<li>Confirm that login, installer redirects, and assets all load without <code>/public</code> in the URL</li>
+</ol>
+<p>If your host lets you change the document root, prefer pointing it at <code>public/</code> instead.</p>
+<h3>Nginx Server Block</h3>
+<p>Create or edit a server block configuration file (for example, <code>/etc/nginx/sites-available/insulacrm</code>):</p>
+<pre><code class="language-nginx">server {
+    listen 80;
+    server_name your-domain.com www.your-domain.com;
+
+    root /var/www/insulacrm/public;
+    index index.php index.html;
+
+    charset utf-8;
+    client_max_body_size 64M;
+
+    location / {
+        try_files $uri $uri/ /index.php?$query_string;
+    }
+
+    location = /favicon.ico { access_log off; log_not_found off; }
+    location = /robots.txt  { access_log off; log_not_found off; }
+
+    error_page 404 /index.php;
+
+    location ~ \.php$ {
+        fastcgi_pass unix:/var/run/php/php8.2-fpm.sock;
+        fastcgi_param SCRIPT_FILENAME $realpath_root$fastcgi_script_name;
+        include fastcgi_params;
+    }
+
+    location ~ /\.(?!well-known).* {
+        deny all;
+    }
+}
+</code></pre>
+<p>Enable the site and restart Nginx:</p>
+<pre><code class="language-bash">sudo ln -s /etc/nginx/sites-available/insulacrm /etc/nginx/sites-enabled/
+sudo nginx -t
+sudo systemctl restart nginx
+</code></pre>
+<hr />
+<h2>Cron Job Setup</h2>
+<p>InsulaCRM relies on Laravel's task scheduler for background operations. You must add a single cron entry on your server.</p>
+<p>Open the crontab editor:</p>
+<pre><code class="language-bash">crontab -e
+</code></pre>
+<p>Add the following line:</p>
+<pre><code>* * * * * cd /var/www/insulacrm &amp;&amp; php artisan schedule:run &gt;&gt; /dev/null 2&gt;&amp;1
+</code></pre>
+<p>Replace <code>/var/www/insulacrm</code> with the actual path to your InsulaCRM installation.</p>
+<p>The scheduler handles the following automated tasks:</p>
+<ul>
+<li><strong>Drip sequences</strong> -- sends scheduled follow-up emails and notifications to leads</li>
+<li><strong>Backup cleanup</strong> -- removes expired database and file backups</li>
+<li><strong>Due diligence alerts</strong> -- notifies agents of upcoming deadlines and required actions</li>
+</ul>
+<hr />
+<h2>Queue Worker Setup</h2>
+<p>InsulaCRM uses queues to process jobs in the background (email sending, notifications, data imports, etc.). You need a queue worker running at all times in production.</p>
+<h3>Basic Usage (Development / Testing)</h3>
+<pre><code class="language-bash">php artisan queue:work --tries=3 --timeout=90
+</code></pre>
+<p>This command will keep running and process jobs as they arrive. Press <code>Ctrl+C</code> to stop it.</p>
+<h3>Production Setup with Supervisor</h3>
+<p>For production environments, use <a href="http://supervisord.org/">Supervisor</a> to keep the queue worker running and restart it automatically if it fails.</p>
+<p>Install Supervisor:</p>
+<pre><code class="language-bash"># Debian / Ubuntu
+sudo apt-get install supervisor
+
+# CentOS / RHEL
+sudo yum install supervisor
+</code></pre>
+<p>Create a configuration file at <code>/etc/supervisor/conf.d/insulacrm-worker.conf</code>:</p>
+<pre><code class="language-ini">[program:insulacrm-worker]
+process_name=%(program_name)s_%(process_num)02d
+command=php /var/www/insulacrm/artisan queue:work --sleep=3 --tries=3 --timeout=90 --max-time=3600
+autostart=true
+autorestart=true
+stopasgroup=true
+killasgroup=true
+user=www-data
+numprocs=2
+redirect_stderr=true
+stdout_logfile=/var/www/insulacrm/storage/logs/worker.log
+stopwaitsecs=3600
+</code></pre>
+<p>Replace <code>/var/www/insulacrm</code> with your actual installation path and <code>www-data</code> with the user your web server runs as. On Linux XAMPP installs under <code>/opt/lampp</code>, Apache commonly runs as <code>daemon</code>, so for local testing you can use <code>chmod 666 .env</code> and <code>chmod -R 777 storage bootstrap/cache plugins</code> instead.</p>
+<p>Start the workers:</p>
+<pre><code class="language-bash">sudo supervisorctl reread
+sudo supervisorctl update
+sudo supervisorctl start insulacrm-worker:*
+</code></pre>
+<p>After deploying updates, restart the workers so they pick up new code:</p>
+<pre><code class="language-bash">sudo supervisorctl restart insulacrm-worker:*
+</code></pre>
+<hr />
+<h2>S3 Storage (Optional)</h2>
+<p>InsulaCRM supports Amazon S3 (or S3-compatible services such as DigitalOcean Spaces and MinIO) for file storage. This is recommended for multi-server deployments and large file volumes.</p>
+<h3>Option A: Configure via the Admin Panel</h3>
+<ol>
+<li>Log in as an administrator.</li>
+<li>Navigate to <strong>Settings &gt; Storage</strong>.</li>
+<li>Select <strong>S3</strong> as the storage driver.</li>
+<li>Enter your bucket name, region, access key, and secret key.</li>
+<li>Save the settings.</li>
+</ol>
+<h3>Option B: Configure via .env</h3>
+<p>Add or update the following variables in your <code>.env</code> file:</p>
+<pre><code class="language-dotenv">FILESYSTEM_DISK=s3
+
+AWS_ACCESS_KEY_ID=your-access-key
+AWS_SECRET_ACCESS_KEY=your-secret-key
+AWS_DEFAULT_REGION=us-east-1
+AWS_BUCKET=your-bucket-name
+AWS_URL=https://your-bucket-name.s3.amazonaws.com
+</code></pre>
+<hr />
+<h2>SMTP / Email (Optional)</h2>
+<p>InsulaCRM can send transactional emails (lead notifications, drip campaigns, password resets, etc.) via any SMTP provider.</p>
+<h3>Option A: Configure via the Admin Panel</h3>
+<ol>
+<li>Log in as an administrator.</li>
+<li>Navigate to <strong>Settings &gt; Email</strong>.</li>
+<li>Enter your SMTP host, port, username, password, and encryption type.</li>
+<li>Click the <strong>&quot;Send Test Email&quot;</strong> button to verify the configuration.</li>
+<li>Save the settings.</li>
+</ol>
+<h3>Option B: Configure via .env</h3>
+<p>Add or update the following variables in your <code>.env</code> file:</p>
+<pre><code class="language-dotenv">MAIL_MAILER=smtp
+MAIL_HOST=smtp.your-provider.com
+MAIL_PORT=587
+MAIL_USERNAME=your-email@example.com
+MAIL_PASSWORD=your-email-password
+MAIL_ENCRYPTION=tls
+MAIL_FROM_ADDRESS=noreply@your-domain.com
+MAIL_FROM_NAME=&quot;InsulaCRM&quot;
+</code></pre>
+<p>Common SMTP providers:</p>
+<table>
+<thead>
+<tr>
+<th>Provider</th>
+<th>Host</th>
+<th>Port</th>
+<th>Encryption</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Gmail</td>
+<td>smtp.gmail.com</td>
+<td>587</td>
+<td>TLS</td>
+</tr>
+<tr>
+<td>Mailgun</td>
+<td>smtp.mailgun.org</td>
+<td>587</td>
+<td>TLS</td>
+</tr>
+<tr>
+<td>SendGrid</td>
+<td>smtp.sendgrid.net</td>
+<td>587</td>
+<td>TLS</td>
+</tr>
+<tr>
+<td>Amazon SES</td>
+<td>email-smtp.us-east-1.amazonaws.com</td>
+<td>587</td>
+<td>TLS</td>
+</tr>
+<tr>
+<td>Mailtrap</td>
+<td>sandbox.smtp.mailtrap.io</td>
+<td>2525</td>
+<td>TLS</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2>Troubleshooting</h2>
+<h3>The installer only works at <code>/public</code></h3>
+<p>Cause: the web server is exposing the Laravel <code>public/</code> directory directly in the URL instead of mapping requests cleanly to the app root or subfolder.</p>
+<p>Fix:</p>
+<ol>
+<li>Preferred: point the document root to <code>public/</code></li>
+<li>For <code>/demo</code> installs: use an Apache alias or equivalent server config so the public URL stays <code>/demo</code></li>
+<li>For shared hosting: keep the supplied root <code>.htaccess</code> and <code>index.php</code> in the project folder</li>
+</ol>
+<p>The final user-facing URL should be:</p>
+<ul>
+<li><code>https://example.com/install</code></li>
+<li>or <code>https://example.com/demo/install</code></li>
+</ul>
+<p>It should not be:</p>
+<ul>
+<li><code>https://example.com/public/install</code></li>
+<li><code>https://example.com/demo/public/install</code></li>
+</ul>
+<h3>The installer reports <code>.env</code> or MySQL driver issues</h3>
+<p>Cause: the package cannot write <code>.env</code>, or PHP is missing <code>pdo_mysql</code>.</p>
+<p>Fix:</p>
+<ol>
+<li>On Linux or macOS, run <code>ls -la</code> first because <code>.env.example</code> is a hidden dotfile and will not appear in a normal <code>ls</code> output</li>
+<li>Ensure <code>.env</code> exists or that the project root is writable so the installer can create it from <code>.env.example</code></li>
+<li>If <code>.env.example</code> is missing after extraction, re-upload the release package or create <code>.env</code> manually from the sample values in this guide</li>
+<li>Install the <code>pdo_mysql</code> extension</li>
+<li>Re-open <code>/install/requirements</code> and confirm the installer environment checks pass</li>
+</ol>
+<p>Example:</p>
+<pre><code class="language-bash">ls -la
+cp .env.example .env
+chmod 664 .env
+</code></pre>
+<p>Manual fallback <code>.env</code> starter:</p>
+<pre><code class="language-dotenv">APP_NAME=InsulaCRM
+APP_ENV=production
+APP_KEY=
+APP_DEBUG=false
+APP_URL=http://localhost
+
+DB_CONNECTION=mysql
+DB_HOST=127.0.0.1
+DB_PORT=3306
+DB_DATABASE=insulacrm
+DB_USERNAME=root
+DB_PASSWORD=
+</code></pre>
+<h3>Automatic database-user creation fails</h3>
+<p>Cause: the credentials can connect to MariaDB, but they do not have the privileges needed for <code>CREATE USER</code> or <code>GRANT</code>.</p>
+<p>Fix:</p>
+<ol>
+<li>Leave the advanced &quot;Create a dedicated database user automatically&quot; option disabled</li>
+<li>Use the database name, username, and password already assigned to your app in the hosting panel</li>
+<li>Only use the automatic-user option when you have MariaDB administrator credentials on a VPS or dedicated server</li>
+</ol>
+<p>This is the expected path for many shared-hosting installs.</p>
+<h3>Low-Friction Deployment Path</h3>
+<p>For the least fragile first-run experience, use one of these:</p>
+<ol>
+<li>Point a domain or subdomain directly at <code>public/</code></li>
+<li>Install in a subfolder like <code>/demo</code> with an Apache alias that maps <code>/demo</code> to <code>public/</code></li>
+<li>If neither is possible, upload into the target folder and keep the included root bootstrap files in place</li>
+</ol>
+<p>Before deploying, smoke test:</p>
+<ul>
+<li><code>/install</code></li>
+<li><code>/login</code></li>
+<li><code>/instant-demo</code></li>
+<li>asset loading without <code>/public</code></li>
+</ul>
+<h3>White Screen / Blank Page</h3>
+<ol>
+<li>Check the Laravel log file for error details:
+<pre><code class="language-bash">tail -100 storage/logs/laravel.log
+</code></pre>
+</li>
+<li>Verify that <code>storage/</code> and <code>bootstrap/cache/</code> are writable by the web server:
+<pre><code class="language-bash">chmod -R 775 storage/ bootstrap/cache/
+chown -R www-data:www-data storage/ bootstrap/cache/
+</code></pre>
+On Linux XAMPP installs under <code>/opt/lampp</code>, Apache commonly runs as <code>daemon</code>, so for local testing use:
+<pre><code class="language-bash">chmod 666 .env
+chmod -R 777 storage/ bootstrap/cache/ plugins/
+</code></pre>
+</li>
+<li>Ensure PHP error reporting is enabled in development. In your <code>.env</code> file:
+<pre><code class="language-dotenv">APP_DEBUG=true
+</code></pre>
+<strong>Important:</strong> Set <code>APP_DEBUG=false</code> on production servers.</li>
+</ol>
+<h3>500 Internal Server Error</h3>
+<ol>
+<li>Verify the application key is set. If <code>APP_KEY</code> in <code>.env</code> is empty, generate one:
+<pre><code class="language-bash">php artisan key:generate
+</code></pre>
+</li>
+<li>Confirm the database is reachable with the credentials in your <code>.env</code> file:
+<pre><code class="language-bash">php artisan db:monitor
+</code></pre>
+</li>
+<li>Clear all caches and try again:
+<pre><code class="language-bash">php artisan config:clear
+php artisan cache:clear
+php artisan route:clear
+php artisan view:clear
+</code></pre>
+</li>
+</ol>
+<h3>Queue Not Processing / Jobs Stuck</h3>
+<ol>
+<li>Verify the cron job is installed and running:
+<pre><code class="language-bash">crontab -l
+</code></pre>
+</li>
+<li>Confirm the queue worker is active:
+<pre><code class="language-bash">php artisan queue:work --tries=3 --timeout=90
+</code></pre>
+</li>
+<li>If using Supervisor, check its status:
+<pre><code class="language-bash">sudo supervisorctl status insulacrm-worker:*
+</code></pre>
+</li>
+<li>Review failed jobs:
+<pre><code class="language-bash">php artisan queue:failed
+</code></pre>
+</li>
+</ol>
+<h3>Emails Not Sending</h3>
+<ol>
+<li>Verify SMTP settings in <strong>Settings &gt; Email</strong> or in your <code>.env</code> file.</li>
+<li>Use the <strong>&quot;Send Test Email&quot;</strong> button in the admin panel to confirm delivery.</li>
+<li>Ensure the queue worker is running -- emails are dispatched via the queue.</li>
+<li>Check the Laravel log for mailer exceptions:
+<pre><code class="language-bash">tail -50 storage/logs/laravel.log
+</code></pre>
+</li>
+</ol>
+<h3>Assets Not Loading (CSS/JS Missing, Broken Images)</h3>
+<ol>
+<li>Create the storage symlink:
+<pre><code class="language-bash">php artisan storage:link
+</code></pre>
+</li>
+<li>Verify that <code>APP_URL</code> in your <code>.env</code> matches the actual URL you are accessing.</li>
+<li>If you intentionally modified the optional Vite/Tailwind starter assets, rebuild them:
+<pre><code class="language-bash">npm run build
+</code></pre>
+</li>
+</ol>
+<h3>Permission Denied Errors</h3>
+<p>Set the correct ownership and permissions:</p>
+<pre><code class="language-bash">chmod -R 775 storage/ bootstrap/cache/
+chown -R www-data:www-data storage/ bootstrap/cache/
+</code></pre>
+<p>Replace <code>www-data</code> with your web server's user. Common alternatives: <code>nginx</code>, <code>apache</code>, <code>http</code>, <code>nobody</code>. On Linux XAMPP installs under <code>/opt/lampp</code>, Apache commonly runs as <code>daemon</code>, so for local testing you can use <code>chmod 666 .env</code> and <code>chmod -R 777 storage bootstrap/cache plugins</code> instead.</p>
+<hr />
+<h2>Upgrading</h2>
+<p>Normal upgrades do <strong>not</strong> require rerunning the installer.</p>
+<p>InsulaCRM now treats an existing configured database as an installed app even if <code>storage/installed.lock</code> is missing, so a normal upgrade should remain on the application path rather than falling back into setup.</p>
+<p>The preferred production workflow is to test the release on a staging copy of your CRM first, validate plugins, integrations, custom automations, and background jobs, and then upgrade production only after the staging test succeeds.</p>
+<p>If you are already running v1.0.1 or later, the preferred upgrade path is the in-app updater in <strong>Settings &gt; System</strong>:</p>
+<ol>
+<li>Upload the official release ZIP</li>
+<li>Let InsulaCRM stage the package and show any warnings</li>
+<li>Click <strong>Snapshot, Backup, and Apply Update</strong></li>
+</ol>
+<p>The updater creates a fresh database backup and a point-in-time recovery snapshot automatically before patching the app, and preserves <code>.env</code>, <code>storage/</code>, <code>public/storage</code>, and <code>plugins/</code>.</p>
+<p>If you do not have a staging environment, use the built-in updater, confirm the automatic database backup completed successfully, and perform the production upgrade during a low-risk maintenance window. The in-app updater reduces risk, but it does not replace staging validation for production systems.</p>
+<p>Recovery snapshots are intended to return the CRM to the last known-good state if an upgrade fails badly. They should be created as late as possible, ideally immediately before the update starts, so any newer code or data you would lose during a restore is kept to a minimum.</p>
+<p>If you need a restore point outside the updater, administrators can create a manual recovery snapshot in <code>Settings &gt; System</code> before risky maintenance or custom work.</p>
+<p>When you create, apply, or restore a snapshot or update from the UI, keep the page open until the action finishes. InsulaCRM now shows a waiting overlay and blocks duplicate submits so users do not accidentally queue the same action multiple times.</p>
+<p>Snapshot restores support both <code>.sql</code> and <code>.sql.gz</code> backups on Windows and Linux. You do not need an external <code>gunzip</code> binary on Windows for restore operations triggered by the product.</p>
+<p>For manual file-replacement upgrades, see <a href="UPGRADE.md">UPGRADE.md</a>.</p>
+<hr />
+<h2>Demo Credentials</h2>
+<p>If you selected <strong>&quot;Load demo data&quot;</strong> during installation (or ran <code>php artisan db:seed</code>), the following accounts are available:</p>
+<table>
+<thead>
+<tr>
+<th>Email</th>
+<th>Password</th>
+<th>Role</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a href="mailto:admin@demo.com">admin@demo.com</a></td>
+<td>password</td>
+<td>Admin</td>
+</tr>
+<tr>
+<td><a href="mailto:agent@demo.com">agent@demo.com</a></td>
+<td>password</td>
+<td>Agent</td>
+</tr>
+<tr>
+<td><a href="mailto:acquisition@demo.com">acquisition@demo.com</a></td>
+<td>password</td>
+<td>Acquisition Agent</td>
+</tr>
+<tr>
+<td><a href="mailto:disposition@demo.com">disposition@demo.com</a></td>
+<td>password</td>
+<td>Disposition Agent</td>
+</tr>
+<tr>
+<td><a href="mailto:scout@demo.com">scout@demo.com</a></td>
+<td>password</td>
+<td>Field Scout</td>
+</tr>
+<tr>
+<td><a href="mailto:agent2@demo.com">agent2@demo.com</a></td>
+<td>password</td>
+<td>Agent</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Important:</strong> If you loaded demo data on a production server, change all default passwords immediately or remove the demo accounts after you have finished exploring the system.</p>
+<hr />
+<h2>Support</h2>
+<p>If you need help with InsulaCRM, please contact support through your normal purchase or distribution channel. Include the following information to help us assist you quickly:</p>
+<ul>
+<li>PHP version (<code>php -v</code>)</li>
+<li>Server type (Apache or Nginx) and operating system</li>
+<li>Contents of <code>storage/logs/laravel.log</code> (last 50 lines)</li>
+<li>Steps to reproduce the issue</li>
+</ul>
+
+            </article>
+        </main>
+    </div>
+</body>
+</html>

@@ -1,0 +1,182 @@
+/* Mobile Responsiveness Fixes for InsulaCRM */
+
+/* Ensure tables scroll horizontally on small screens */
+@media (max-width: 767.98px) {
+    .table-responsive {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    /* Compact card headers on mobile */
+    .card-header {
+        flex-wrap: wrap;
+        gap: 0.5rem;
+    }
+
+    .card-header .card-actions {
+        width: 100%;
+    }
+
+    /* Stack filter forms vertically */
+    .row.g-2 > .col-auto {
+        width: 100%;
+    }
+
+    /* Full-width buttons on mobile */
+    .btn-list {
+        flex-wrap: wrap;
+    }
+
+    .btn-list .btn {
+        flex: 1 1 auto;
+    }
+
+    /* Compact KPI cards */
+    .card .display-6 {
+        font-size: 1.5rem;
+    }
+
+    /* Kanban horizontal scroll */
+    .kanban-board {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        padding-bottom: 1rem;
+    }
+
+    .kanban-board .col {
+        min-width: 280px;
+    }
+
+    /* Page header stacking */
+    .page-header .row {
+        flex-direction: column;
+    }
+
+    .page-header .col-auto {
+        width: 100%;
+        margin-top: 0.5rem;
+    }
+
+    /* Sidebar overlay improvements */
+    .navbar-vertical.navbar-expand-lg {
+        z-index: 1050;
+    }
+
+    /* Notification dropdown full-width on mobile */
+    #notification-bell .dropdown-menu {
+        width: 100vw !important;
+        max-width: 360px;
+    }
+
+    /* Search bar shrink */
+    #global-search-wrap {
+        width: 160px !important;
+    }
+
+    /* Pipeline/Deal cards stack */
+    .pipeline-stages {
+        flex-direction: column;
+    }
+
+    /* Steps counter wrap */
+    .steps {
+        flex-wrap: wrap;
+    }
+
+    /* Modal improvements */
+    .modal-dialog {
+        margin: 0.5rem;
+    }
+}
+
+/* Pipeline mobile: simplified list view */
+@media (max-width: 767.98px) {
+    .stage-cards .row {
+        flex-direction: column;
+    }
+
+    .stage-cards .row > .col-md-6,
+    .stage-cards .row > .col-lg-4 {
+        width: 100%;
+    }
+
+    .deal-card {
+        margin-bottom: 0.5rem;
+    }
+
+    /* Make stage stats more compact on mobile */
+    .stage-header .d-flex {
+        flex-wrap: wrap;
+        gap: 0.25rem;
+    }
+
+    /* Slide-over panel full width on mobile */
+    .slide-over-panel {
+        width: 100% !important;
+        max-width: 100% !important;
+    }
+
+    /* Move-to dropdown more prominent on mobile */
+    .move-dropdown .btn {
+        min-height: 36px;
+        min-width: 36px;
+    }
+}
+
+/* Tablet adjustments */
+@media (min-width: 768px) and (max-width: 991.98px) {
+    #global-search-wrap {
+        width: 200px !important;
+    }
+
+    .kanban-board .col {
+        min-width: 220px;
+    }
+}
+
+/* Visible focus indicator for keyboard users */
+*:focus-visible {
+    outline: 2px solid var(--tblr-primary, #206bc4);
+    outline-offset: 2px;
+}
+
+/* Touch-friendly targets */
+@media (pointer: coarse) {
+    .btn-sm {
+        min-height: 44px;
+        padding: 0.375rem 0.75rem;
+    }
+
+    .form-control-sm {
+        min-height: 44px;
+    }
+
+    .dropdown-item {
+        padding: 0.5rem 1rem;
+    }
+
+    .nav-link {
+        padding: 0.625rem 1rem;
+    }
+}
+
+/* Print styles */
+@media print {
+    .navbar, .page-header, .btn, .card-actions, #notification-bell, #global-search-wrap, #theme-toggle {
+        display: none !important;
+    }
+
+    .page-wrapper {
+        margin: 0;
+        padding: 0;
+    }
+
+    .card {
+        border: 1px solid #ddd;
+        box-shadow: none;
+    }
+
+    .page-header .col-auto, #toast-container, .form-select.status-select {
+        display: none !important;
+    }
+}

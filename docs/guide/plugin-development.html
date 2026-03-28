@@ -1,0 +1,1554 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Plugin Developer Guide | InsulaCRM</title>
+    <style>
+        :root {
+            color-scheme: light;
+            --bg: #f4f1ea;
+            --surface: #ffffff;
+            --border: #d6cec0;
+            --text: #1f1e1a;
+            --muted: #6c675d;
+            --accent: #0f5b6d;
+            --accent-soft: #dff1f5;
+            --code-bg: #f7f7f8;
+        }
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            font-family: Georgia, "Times New Roman", serif;
+            background: linear-gradient(180deg, #f8f5ef 0%, var(--bg) 100%);
+            color: var(--text);
+            line-height: 1.65;
+        }
+        .layout {
+            display: grid;
+            grid-template-columns: 280px minmax(0, 1fr);
+            min-height: 100vh;
+        }
+        .sidebar {
+            background: #12343b;
+            color: #f4f4f1;
+            padding: 32px 24px;
+            position: sticky;
+            top: 0;
+            align-self: start;
+            min-height: 100vh;
+        }
+        .sidebar h1 {
+            font-size: 1.25rem;
+            margin: 0 0 8px;
+            font-family: "Segoe UI", sans-serif;
+        }
+        .sidebar p {
+            margin: 0 0 24px;
+            color: #c9dcde;
+            font-size: 0.95rem;
+            font-family: "Segoe UI", sans-serif;
+        }
+        .sidebar ul {
+            list-style: none;
+            margin: 0;
+            padding: 0;
+            display: grid;
+            gap: 10px;
+        }
+        .sidebar a {
+            display: block;
+            text-decoration: none;
+            color: #eef7f8;
+            padding: 10px 12px;
+            border-radius: 10px;
+            font-family: "Segoe UI", sans-serif;
+            transition: background-color 0.15s ease;
+        }
+        .sidebar a:hover,
+        .sidebar a.active {
+            background: rgba(255,255,255,0.12);
+        }
+        .content {
+            padding: 40px 48px 56px;
+        }
+        .article {
+            max-width: 980px;
+            margin: 0 auto;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            padding: 40px 44px;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.06);
+        }
+        h1, h2, h3, h4 {
+            line-height: 1.2;
+            color: #132026;
+        }
+        h1 { font-size: 2.2rem; margin-top: 0; }
+        h2 {
+            font-size: 1.5rem;
+            margin-top: 2.4rem;
+            padding-top: 0.4rem;
+            border-top: 1px solid #ece4d6;
+        }
+        h3 { font-size: 1.18rem; margin-top: 1.6rem; }
+        p, li { font-size: 1rem; }
+        a { color: var(--accent); }
+        code {
+            font-family: Consolas, Monaco, monospace;
+            background: var(--code-bg);
+            padding: 0.12rem 0.35rem;
+            border-radius: 4px;
+            font-size: 0.94em;
+        }
+        pre {
+            background: #0f1720;
+            color: #f8fafc;
+            padding: 16px;
+            border-radius: 12px;
+            overflow-x: auto;
+            font-size: 0.92rem;
+        }
+        pre code {
+            background: transparent;
+            padding: 0;
+            color: inherit;
+        }
+        blockquote {
+            margin: 1.5rem 0;
+            padding: 0.8rem 1rem;
+            border-left: 4px solid var(--accent);
+            background: var(--accent-soft);
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 1.5rem 0;
+            font-size: 0.96rem;
+        }
+        th, td {
+            border: 1px solid var(--border);
+            padding: 10px 12px;
+            text-align: left;
+            vertical-align: top;
+        }
+        th {
+            background: #f5efe2;
+            font-family: "Segoe UI", sans-serif;
+        }
+        hr {
+            border: 0;
+            border-top: 1px solid var(--border);
+            margin: 2rem 0;
+        }
+        @media (max-width: 960px) {
+            .layout { grid-template-columns: 1fr; }
+            .sidebar {
+                position: static;
+                min-height: auto;
+            }
+            .content {
+                padding: 20px;
+            }
+            .article {
+                padding: 24px 20px;
+                border-radius: 16px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="layout">
+        <aside class="sidebar">
+            <h1>InsulaCRM Docs</h1>
+            <p>Documentation included with this release.</p>
+            <ul><li><a href="index.html">Documentation Home</a></li><li><a href="overview.html">Overview</a></li><li><a href="installation-guide.html">Installation Guide</a></li><li><a href="upgrade-guide.html">Upgrade Guide</a></li><li><a href="changelog.html">Changelog</a></li><li><a href="plugin-development.html" class="active">Plugin Development</a></li><li><a href="credits.html">Credits</a></li></ul>
+        </aside>
+        <main class="content">
+            <article class="article markdown-body">
+                <h1>Plugin Developer Guide</h1>
+<h2>Table of Contents</h2>
+<ol>
+<li><a href="#architecture-overview">Architecture Overview</a></li>
+<li><a href="#directory-structure">Directory Structure</a></li>
+<li><a href="#plugin-manifest">Plugin Manifest (plugin.json)</a></li>
+<li><a href="#the-bootphp-entry-point">The boot.php Entry Point</a></li>
+<li><a href="#baseplugin-class">BasePlugin Class</a></li>
+<li><a href="#hooks-and-filters">Hooks and Filters</a></li>
+<li><a href="#available-action-hooks">Available Action Hooks</a></li>
+<li><a href="#using-filters">Using Filters</a></li>
+<li><a href="#menu-items-dashboard-widgets-and-settings-tabs">Menu Items, Dashboard Widgets, and Settings Tabs</a></li>
+<li><a href="#routes-and-migrations">Routes and Migrations</a></li>
+<li><a href="#using-the-rest-api-from-plugins">Using the REST API from Plugins</a></li>
+<li><a href="#helloworld-plugin-walkthrough">HelloWorld Plugin Walkthrough</a></li>
+<li><a href="#advanced-plugin-example">Advanced Plugin Example</a></li>
+<li><a href="#packaging-and-distribution">Packaging and Distribution</a></li>
+<li><a href="#security-considerations">Security Considerations</a></li>
+<li><a href="#troubleshooting">Troubleshooting</a></li>
+</ol>
+<hr />
+<h2>Architecture Overview</h2>
+<p>The CRM uses a lightweight, WordPress-inspired plugin system built on three core components:</p>
+<table>
+<thead>
+<tr>
+<th>Component</th>
+<th>Location</th>
+<th>Responsibility</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>HookManager</strong></td>
+<td><code>app/Services/HookManager.php</code></td>
+<td>Registers and dispatches actions and filters with priority support</td>
+</tr>
+<tr>
+<td><strong>PluginManager</strong></td>
+<td><code>app/Services/PluginManager.php</code></td>
+<td>Discovers, boots, and tracks active plugins from the database</td>
+</tr>
+<tr>
+<td><strong>Hooks Facade</strong></td>
+<td><code>app/Facades/Hooks.php</code></td>
+<td>Provides a static interface (<code>Hooks::addAction(...)</code>) to the HookManager singleton</td>
+</tr>
+<tr>
+<td><strong>BasePlugin</strong></td>
+<td><code>app/Plugins/BasePlugin.php</code></td>
+<td>Abstract class offering convenience methods for menu items, widgets, settings tabs, routes, and migrations</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Lifecycle:</strong></p>
+<ol>
+<li>On application boot, <code>PluginManager::bootAll()</code> queries the <code>plugins</code> table for rows where <code>is_active = true</code>.</li>
+<li>For each active plugin, the manager locates <code>plugins/{slug}/boot.php</code> and executes it inside a <code>try/catch</code>.</li>
+<li>Inside <code>boot.php</code>, the plugin registers callbacks on named hooks via the <code>Hooks</code> facade.</li>
+<li>When CRM controllers perform actions (creating leads, changing deal stages, etc.), they call <code>Hooks::doAction(...)</code> or <code>Hooks::applyFilter(...)</code>, which dispatches all registered callbacks in priority order.</li>
+</ol>
+<hr />
+<h2>Directory Structure</h2>
+<p>Every plugin lives under the <code>plugins/</code> directory at the project root:</p>
+<pre><code>plugins/
+  my-plugin/
+    plugin.json        # Required - manifest file
+    boot.php           # Required - entry point
+    src/               # Optional - PHP classes
+      MyPluginService.php
+    routes/            # Optional - web routes
+      web.php
+    database/          # Optional - migrations
+      migrations/
+        2025_01_01_000000_create_custom_table.php
+    resources/         # Optional - views
+      views/
+        widget.blade.php
+        settings.blade.php
+</code></pre>
+<p>The only two files that are <strong>required</strong> are <code>plugin.json</code> and <code>boot.php</code>. Everything else is optional and depends on the complexity of your plugin.</p>
+<hr />
+<h2>Plugin Manifest</h2>
+<p>The <code>plugin.json</code> file describes your plugin to the system. It is read when the plugin is installed and its values are stored in the <code>plugins</code> database table.</p>
+<pre><code class="language-json">{
+    &quot;name&quot;: &quot;My Custom Plugin&quot;,
+    &quot;slug&quot;: &quot;my-custom-plugin&quot;,
+    &quot;version&quot;: &quot;1.0.0&quot;,
+    &quot;author&quot;: &quot;Your Name&quot;,
+    &quot;description&quot;: &quot;A short description of what this plugin does.&quot;
+}
+</code></pre>
+<h3>Fields</h3>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Type</th>
+<th>Required</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>name</code></td>
+<td>string</td>
+<td>Yes</td>
+<td>Human-readable display name</td>
+</tr>
+<tr>
+<td><code>slug</code></td>
+<td>string</td>
+<td>Yes</td>
+<td>Unique identifier, used as the directory name. Must be lowercase and use hyphens (e.g., <code>my-plugin</code>).</td>
+</tr>
+<tr>
+<td><code>version</code></td>
+<td>string</td>
+<td>Yes</td>
+<td>Semantic version (e.g., <code>1.0.0</code>)</td>
+</tr>
+<tr>
+<td><code>author</code></td>
+<td>string</td>
+<td>Yes</td>
+<td>Author or organization name</td>
+</tr>
+<tr>
+<td><code>description</code></td>
+<td>string</td>
+<td>Yes</td>
+<td>Brief description shown in the plugin list</td>
+</tr>
+</tbody>
+</table>
+<p>The <code>slug</code> must exactly match the plugin's directory name under <code>plugins/</code>.</p>
+<h3>Database Record</h3>
+<p>When a plugin is installed, a corresponding row is created in the <code>plugins</code> table:</p>
+<table>
+<thead>
+<tr>
+<th>Column</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>tenant_id</code></td>
+<td>integer</td>
+<td>The tenant this plugin installation belongs to</td>
+</tr>
+<tr>
+<td><code>name</code></td>
+<td>string</td>
+<td>From <code>plugin.json</code></td>
+</tr>
+<tr>
+<td><code>slug</code></td>
+<td>string</td>
+<td>From <code>plugin.json</code></td>
+</tr>
+<tr>
+<td><code>version</code></td>
+<td>string</td>
+<td>From <code>plugin.json</code></td>
+</tr>
+<tr>
+<td><code>author</code></td>
+<td>string</td>
+<td>From <code>plugin.json</code></td>
+</tr>
+<tr>
+<td><code>description</code></td>
+<td>string</td>
+<td>From <code>plugin.json</code></td>
+</tr>
+<tr>
+<td><code>is_active</code></td>
+<td>boolean</td>
+<td>Whether the plugin is currently enabled</td>
+</tr>
+<tr>
+<td><code>installed_at</code></td>
+<td>datetime</td>
+<td>When the plugin was installed</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2>The boot.php Entry Point</h2>
+<p><code>boot.php</code> is the first file executed when your plugin loads. It is included via <code>require_once</code> by the <code>PluginManager</code>. This file should register all of your hook callbacks.</p>
+<h3>Minimal Example</h3>
+<pre><code class="language-php">&lt;?php
+
+use App\Facades\Hooks;
+
+Hooks::addAction('lead.created', function ($lead) {
+    // Your logic here
+});
+</code></pre>
+<h3>Important Notes</h3>
+<ul>
+<li><code>boot.php</code> is executed in the global scope. You have access to all Laravel facades and services.</li>
+<li>The file is loaded via <code>require_once</code>, so it runs exactly once per request.</li>
+<li>If <code>boot.php</code> throws an uncaught exception, the <code>PluginManager</code> catches it and logs the error. The rest of the application continues to function. However, you should still wrap risky logic in your own try/catch blocks (see <a href="#security-considerations">Security Considerations</a>).</li>
+<li>Avoid heavy computation in <code>boot.php</code> itself. Register callbacks and defer work to when hooks actually fire.</li>
+</ul>
+<hr />
+<h2>BasePlugin Class</h2>
+<p>For more complex plugins, you can extend <code>App\Plugins\BasePlugin</code> instead of writing everything in <code>boot.php</code>. BasePlugin provides structured lifecycle methods and convenience helpers.</p>
+<h3>Class Signature</h3>
+<pre><code class="language-php">abstract class BasePlugin
+{
+    protected HookManager $hooks;
+    protected string $basePath;
+    protected array $manifest;
+
+    public function __construct(HookManager $hooks, string $basePath, array $manifest);
+
+    abstract public function register(): void;  // Register services, bindings, hooks
+    abstract public function boot(): void;       // Boot logic after all plugins are registered
+}
+</code></pre>
+<h3>Using BasePlugin from boot.php</h3>
+<pre><code class="language-php">&lt;?php
+// plugins/my-plugin/boot.php
+
+use App\Plugins\BasePlugin;
+use App\Services\HookManager;
+
+class MyPlugin extends BasePlugin
+{
+    public function register(): void
+    {
+        $this-&gt;hooks-&gt;addAction('lead.created', [$this, 'onLeadCreated']);
+    }
+
+    public function boot(): void
+    {
+        $this-&gt;addMenuItem('My Plugin', 'plugin.my-plugin.index', 'fas fa-cog');
+        $this-&gt;addDashboardWidget('my-plugin::widget', 50);
+        $this-&gt;addSettingsTab('My Plugin', 'my-plugin::settings');
+        $this-&gt;loadRoutes(__DIR__ . '/routes/web.php');
+        $this-&gt;registerMigrations(__DIR__ . '/database/migrations');
+    }
+
+    public function onLeadCreated($lead): void
+    {
+        \Log::info(&quot;MyPlugin: Lead {$lead-&gt;id} created&quot;);
+    }
+}
+
+// Instantiate and run
+$hooks = app(HookManager::class);
+$manifest = json_decode(file_get_contents(__DIR__ . '/plugin.json'), true);
+$plugin = new MyPlugin($hooks, __DIR__, $manifest);
+$plugin-&gt;register();
+$plugin-&gt;boot();
+</code></pre>
+<h3>Available BasePlugin Methods</h3>
+<table>
+<thead>
+<tr>
+<th>Method</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>addMenuItem(string $label, string $route, string $icon)</code></td>
+<td>Adds a link to the CRM sidebar navigation</td>
+</tr>
+<tr>
+<td><code>addDashboardWidget(string $view, int $position)</code></td>
+<td>Registers a Blade view as a dashboard widget. Lower <code>$position</code> values appear first.</td>
+</tr>
+<tr>
+<td><code>addSettingsTab(string $label, string $view)</code></td>
+<td>Adds a tab to the Settings page with the given Blade view</td>
+</tr>
+<tr>
+<td><code>loadRoutes(string $routesFile)</code></td>
+<td>Loads a routes file under the <code>web</code>, <code>auth</code>, and <code>tenant</code> middleware with prefix <code>plugin/{slug}</code></td>
+</tr>
+<tr>
+<td><code>registerMigrations(string $path)</code></td>
+<td>Registers a directory of migration files to run with <code>php artisan migrate</code></td>
+</tr>
+<tr>
+<td><code>getSlug(): string</code></td>
+<td>Returns the plugin slug</td>
+</tr>
+<tr>
+<td><code>getManifest(): array</code></td>
+<td>Returns the full parsed <code>plugin.json</code></td>
+</tr>
+<tr>
+<td><code>getBasePath(): string</code></td>
+<td>Returns the absolute filesystem path to the plugin directory</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2>Hooks and Filters</h2>
+<p>The hook system distinguishes between <strong>actions</strong> and <strong>filters</strong>:</p>
+<ul>
+<li><strong>Actions</strong> perform side effects (logging, sending notifications, creating records). They do not return a value.</li>
+<li><strong>Filters</strong> transform data. The callback receives a value, modifies it, and returns the modified value.</li>
+</ul>
+<h3>Registering an Action</h3>
+<pre><code class="language-php">use App\Facades\Hooks;
+
+Hooks::addAction('hook.name', callable $callback, int $priority = 10);
+</code></pre>
+<ul>
+<li><code>$callback</code> receives whatever arguments the <code>doAction()</code> call passes.</li>
+<li><code>$priority</code> controls execution order. Lower numbers run first. Default is <code>10</code>.</li>
+</ul>
+<h3>Registering a Filter</h3>
+<pre><code class="language-php">use App\Facades\Hooks;
+
+Hooks::addFilter('filter.name', callable $callback, int $priority = 10);
+</code></pre>
+<ul>
+<li><code>$callback</code> receives the current value as its first argument, plus any additional arguments.</li>
+<li><strong>You must return the (modified or unmodified) value.</strong> Failing to return will set the value to <code>null</code>.</li>
+</ul>
+<h3>Priority</h3>
+<p>Multiple callbacks on the same hook are sorted by priority (ascending) before execution. Within the same priority level, callbacks execute in the order they were registered.</p>
+<pre><code class="language-php">// Runs second (priority 20)
+Hooks::addAction('lead.created', function ($lead) {
+    // ...
+}, 20);
+
+// Runs first (priority 5)
+Hooks::addAction('lead.created', function ($lead) {
+    // ...
+}, 5);
+</code></pre>
+<hr />
+<h2>Available Action Hooks</h2>
+<p>The following hooks are currently fired by the CRM core. Each section lists the hook name, where it fires, and the arguments your callback receives.</p>
+<h3>lead.created</h3>
+<p>Fired after a new lead is created and saved to the database.</p>
+<pre><code class="language-php">Hooks::addAction('lead.created', function ($lead) {
+    // $lead - App\Models\Lead instance
+});
+</code></pre>
+<p><strong>Fired in:</strong> <code>LeadController::store()</code></p>
+<h3>lead.updated</h3>
+<p>Fired after an existing lead is updated.</p>
+<pre><code class="language-php">Hooks::addAction('lead.updated', function ($lead) {
+    // $lead - App\Models\Lead instance (with updated attributes)
+});
+</code></pre>
+<p><strong>Fired in:</strong> <code>LeadController::update()</code></p>
+<h3>lead.status_changed</h3>
+<p>Fired when a lead's status field changes (via web UI or API).</p>
+<pre><code class="language-php">Hooks::addAction('lead.status_changed', function ($lead, $oldStatus) {
+    // $lead      - App\Models\Lead instance (with new status)
+    // $oldStatus - string, the previous status value
+});
+</code></pre>
+<p><strong>Fired in:</strong> <code>LeadController::update()</code>, <code>LeadController::updateStatus()</code>, <code>LeadController::bulkAction()</code></p>
+<h3>deal.stage_changed</h3>
+<p>Fired after a deal's stage is updated.</p>
+<pre><code class="language-php">Hooks::addAction('deal.stage_changed', function ($deal, $oldStage) {
+    // $deal     - App\Models\Deal instance (with new stage)
+    // $oldStage - string, the previous stage value
+});
+</code></pre>
+<p><strong>Fired in:</strong> <code>DealController::updateStage()</code></p>
+<h3>activity.logged</h3>
+<p>Fired after an activity (call, email, note, etc.) is recorded against a lead.</p>
+<pre><code class="language-php">Hooks::addAction('activity.logged', function ($activity) {
+    // $activity - App\Models\Activity instance
+});
+</code></pre>
+<p><strong>Fired in:</strong> <code>ActivityController::store()</code></p>
+<h3>buyer.notified</h3>
+<p>Fired after a buyer is notified about a matching deal.</p>
+<pre><code class="language-php">Hooks::addAction('buyer.notified', function ($buyer, $deal) {
+    // $buyer - App\Models\Buyer instance
+    // $deal  - App\Models\Deal instance
+});
+</code></pre>
+<p><strong>Fired in:</strong> <code>DealController::notifyBuyer()</code></p>
+<h3>sequence.step_executed</h3>
+<p>Fired after a drip sequence step is processed (email, SMS, call, etc.).</p>
+<pre><code class="language-php">Hooks::addAction('sequence.step_executed', function ($lead, $stepData) {
+    // $lead     - App\Models\Lead instance
+    // $stepData - array with step details (action_type, message_template, delay_days, etc.)
+});
+</code></pre>
+<p><strong>Fired in:</strong> <code>ProcessSequences</code> command (daily cron)</p>
+<hr />
+<h2>Outbound Webhooks</h2>
+<p>The CRM includes a built-in outbound webhook system that fires HTTP POST requests to external URLs when CRM events occur. This is separate from the internal hook system — webhooks are HTTP-based and configured by tenants via Settings &gt; Webhooks.</p>
+<h3>How Webhooks Work</h3>
+<ol>
+<li>Tenants configure webhook endpoints at Settings &gt; Webhooks with a URL, optional HMAC secret, and event subscriptions.</li>
+<li>When a subscribed event fires, the <code>WebhookService</code> dispatches a queued <code>DispatchWebhook</code> job.</li>
+<li>The job sends an HTTP POST with a JSON payload signed with HMAC-SHA256 (if a secret is set).</li>
+<li>Failed deliveries are retried 3 times with exponential backoff (10s, 60s, 300s).</li>
+<li>After 10 consecutive failures, the webhook is automatically disabled.</li>
+</ol>
+<h3>Webhook Payload Format</h3>
+<pre><code class="language-json">{
+    &quot;event&quot;: &quot;lead.created&quot;,
+    &quot;timestamp&quot;: &quot;2026-03-10T15:00:00+00:00&quot;,
+    &quot;data&quot;: {
+        &quot;lead_id&quot;: 42,
+        &quot;first_name&quot;: &quot;John&quot;,
+        &quot;last_name&quot;: &quot;Doe&quot;,
+        &quot;email&quot;: &quot;john@example.com&quot;,
+        &quot;phone&quot;: &quot;555-0100&quot;,
+        &quot;source&quot;: &quot;website&quot;,
+        &quot;status&quot;: &quot;new&quot;
+    }
+}
+</code></pre>
+<h3>Webhook Headers</h3>
+<table>
+<thead>
+<tr>
+<th>Header</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>Content-Type</code></td>
+<td><code>application/json</code></td>
+</tr>
+<tr>
+<td><code>X-Webhook-Event</code></td>
+<td>Event name (e.g., <code>lead.created</code>)</td>
+</tr>
+<tr>
+<td><code>X-Webhook-Signature</code></td>
+<td>HMAC-SHA256 hex digest of the JSON body (only if secret is configured)</td>
+</tr>
+<tr>
+<td><code>User-Agent</code></td>
+<td><code>InsulaCRM-Webhook/1.0</code></td>
+</tr>
+</tbody>
+</table>
+<h3>Verifying Webhook Signatures</h3>
+<p>If you configured a secret, verify the signature on the receiving end:</p>
+<pre><code class="language-php">$payload = file_get_contents('php://input');
+$signature = $_SERVER['HTTP_X_WEBHOOK_SIGNATURE'] ?? '';
+$expected = hash_hmac('sha256', $payload, $yourSecret);
+
+if (!hash_equals($expected, $signature)) {
+    http_response_code(403);
+    exit('Invalid signature');
+}
+</code></pre>
+<h3>Dispatching Webhooks from Plugins</h3>
+<p>Plugins can trigger webhook deliveries for custom events:</p>
+<pre><code class="language-php">use App\Services\WebhookService;
+
+Hooks::addAction('my-plugin.custom-event', function ($data) {
+    WebhookService::dispatch('my-plugin.custom-event', [
+        'key' =&gt; 'value',
+    ], auth()-&gt;user()-&gt;tenant_id);
+});
+</code></pre>
+<p>Note: Tenants must subscribe to your custom event name in their webhook configuration. Consider documenting your plugin's custom events for users.</p>
+<h3>Events That Trigger Webhooks</h3>
+<table>
+<thead>
+<tr>
+<th>Event</th>
+<th>Data Payload</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>lead.created</code></td>
+<td>lead_id, first_name, last_name, email, phone, source, status</td>
+</tr>
+<tr>
+<td><code>lead.updated</code></td>
+<td>lead_id, first_name, last_name, status, temperature</td>
+</tr>
+<tr>
+<td><code>deal.stage_changed</code></td>
+<td>deal_id, title, old_stage, new_stage, agent_id</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2>Using Filters</h2>
+<p>Filters allow plugins to modify data before it is used by the core application. While the CRM core does not yet fire many filters, the infrastructure is fully in place for both core and plugin-to-plugin use.</p>
+<h3>Example: Modifying Data Before Display</h3>
+<pre><code class="language-php">// Plugin A registers a filter
+Hooks::addFilter('lead.display_name', function ($name, $lead) {
+    return $name . ' [VIP]';
+}, 10);
+</code></pre>
+<h3>Firing a Filter from Your Own Plugin</h3>
+<p>You can create your own filter hooks to let other plugins extend your functionality:</p>
+<pre><code class="language-php">// In your plugin - fire the filter
+$widgets = Hooks::applyFilter('my-plugin.widgets', $defaultWidgets);
+
+// In another plugin - modify the value
+Hooks::addFilter('my-plugin.widgets', function ($widgets) {
+    $widgets[] = 'extra-widget';
+    return $widgets;
+});
+</code></pre>
+<h3>Filter vs Action: When to Use Which</h3>
+<table>
+<thead>
+<tr>
+<th>Use Case</th>
+<th>Type</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Send a notification when something happens</td>
+<td>Action</td>
+</tr>
+<tr>
+<td>Log an event</td>
+<td>Action</td>
+</tr>
+<tr>
+<td>Modify a value before it is saved or displayed</td>
+<td>Filter</td>
+</tr>
+<tr>
+<td>Add items to a list before rendering</td>
+<td>Filter</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2>Menu Items, Dashboard Widgets, and Settings Tabs</h2>
+<p>These features are available through the <code>BasePlugin</code> class.</p>
+<h3>Adding a Sidebar Menu Item</h3>
+<pre><code class="language-php">public function boot(): void
+{
+    $this-&gt;addMenuItem('Reports', 'plugin.my-plugin.reports', 'fas fa-chart-bar');
+}
+</code></pre>
+<ul>
+<li><strong>$label</strong>: Text shown in the sidebar.</li>
+<li><strong>$route</strong>: Named Laravel route. Routes loaded via <code>loadRoutes()</code> are prefixed with <code>plugin/{slug}</code>.</li>
+<li><strong>$icon</strong>: Font Awesome icon class. Defaults to <code>fas fa-puzzle-piece</code>.</li>
+</ul>
+<h3>Adding a Dashboard Widget</h3>
+<pre><code class="language-php">public function boot(): void
+{
+    $this-&gt;addDashboardWidget('my-plugin::dashboard-widget', 50);
+}
+</code></pre>
+<ul>
+<li><strong>$view</strong>: A Blade view name. Use <code>{slug}::viewname</code> if you register a view namespace.</li>
+<li><strong>$position</strong>: Integer controlling display order. Lower values appear first. Default is <code>100</code>.</li>
+</ul>
+<h3>Adding a Settings Tab</h3>
+<pre><code class="language-php">public function boot(): void
+{
+    $this-&gt;addSettingsTab('API Configuration', 'my-plugin::settings-api');
+}
+</code></pre>
+<ul>
+<li><strong>$label</strong>: Tab title shown on the settings page.</li>
+<li><strong>$view</strong>: Blade view to render as the tab content.</li>
+</ul>
+<hr />
+<h2>Routes and Migrations</h2>
+<h3>Routes</h3>
+<p>Use <code>BasePlugin::loadRoutes()</code> to register routes. They are automatically wrapped in <code>web</code>, <code>auth</code>, and <code>tenant</code> middleware, and prefixed with <code>plugin/{slug}</code>.</p>
+<pre><code class="language-php">// plugins/my-plugin/routes/web.php
+
+use Illuminate\Support\Facades\Route;
+use Plugins\MyPlugin\Controllers\ReportController;
+
+Route::get('/reports', [ReportController::class, 'index'])-&gt;name('plugin.my-plugin.reports');
+Route::get('/reports/{id}', [ReportController::class, 'show'])-&gt;name('plugin.my-plugin.reports.show');
+</code></pre>
+<p>These routes become accessible at <code>/plugin/my-plugin/reports</code> and <code>/plugin/my-plugin/reports/123</code>.</p>
+<h3>Migrations</h3>
+<p>Use <code>BasePlugin::registerMigrations()</code> to include migration files. They will be picked up automatically when <code>php artisan migrate</code> runs.</p>
+<pre><code class="language-php">public function boot(): void
+{
+    $this-&gt;registerMigrations(__DIR__ . '/database/migrations');
+}
+</code></pre>
+<p>Migration files follow the standard Laravel naming convention:</p>
+<pre><code>plugins/my-plugin/database/migrations/2025_06_01_000000_create_reports_table.php
+</code></pre>
+<hr />
+<h2>Using the REST API from Plugins</h2>
+<p>The CRM includes a full REST API at <code>/api/v1/</code> with 20 endpoints covering leads, deals, buyers, properties, activities, and stats. Plugins can leverage this API in two ways:</p>
+<ol>
+<li><strong>Internal use</strong> — call API controllers directly from plugin code (no HTTP overhead)</li>
+<li><strong>External integrations</strong> — make HTTP requests to the API from external services your plugin connects to</li>
+</ol>
+<h3>Available API Endpoints</h3>
+<table>
+<thead>
+<tr>
+<th>Method</th>
+<th>Endpoint</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>GET</td>
+<td><code>/api/v1/leads</code></td>
+<td>List leads (filterable by status, source, since)</td>
+</tr>
+<tr>
+<td>POST</td>
+<td><code>/api/v1/leads</code></td>
+<td>Create a lead with optional property</td>
+</tr>
+<tr>
+<td>GET</td>
+<td><code>/api/v1/leads/{id}</code></td>
+<td>Get a single lead</td>
+</tr>
+<tr>
+<td>PUT</td>
+<td><code>/api/v1/leads/{id}</code></td>
+<td>Update a lead</td>
+</tr>
+<tr>
+<td>GET</td>
+<td><code>/api/v1/deals</code></td>
+<td>List deals (filterable by stage, agent, since)</td>
+</tr>
+<tr>
+<td>POST</td>
+<td><code>/api/v1/deals</code></td>
+<td>Create a deal</td>
+</tr>
+<tr>
+<td>GET</td>
+<td><code>/api/v1/deals/stages</code></td>
+<td>Get all deal stage definitions</td>
+</tr>
+<tr>
+<td>GET</td>
+<td><code>/api/v1/deals/{id}</code></td>
+<td>Get a single deal</td>
+</tr>
+<tr>
+<td>PUT</td>
+<td><code>/api/v1/deals/{id}</code></td>
+<td>Update a deal (stage changes trigger hooks)</td>
+</tr>
+<tr>
+<td>GET</td>
+<td><code>/api/v1/buyers</code></td>
+<td>List buyers (filterable by search, state)</td>
+</tr>
+<tr>
+<td>POST</td>
+<td><code>/api/v1/buyers</code></td>
+<td>Create a buyer</td>
+</tr>
+<tr>
+<td>GET</td>
+<td><code>/api/v1/buyers/{id}</code></td>
+<td>Get a single buyer</td>
+</tr>
+<tr>
+<td>PUT</td>
+<td><code>/api/v1/buyers/{id}</code></td>
+<td>Update a buyer</td>
+</tr>
+<tr>
+<td>GET</td>
+<td><code>/api/v1/properties</code></td>
+<td>List properties (filterable by type, state, zip)</td>
+</tr>
+<tr>
+<td>POST</td>
+<td><code>/api/v1/properties</code></td>
+<td>Create a property</td>
+</tr>
+<tr>
+<td>GET</td>
+<td><code>/api/v1/properties/{id}</code></td>
+<td>Get a single property</td>
+</tr>
+<tr>
+<td>PUT</td>
+<td><code>/api/v1/properties/{id}</code></td>
+<td>Update a property</td>
+</tr>
+<tr>
+<td>GET</td>
+<td><code>/api/v1/activities</code></td>
+<td>List activities (filterable by lead, type, agent)</td>
+</tr>
+<tr>
+<td>POST</td>
+<td><code>/api/v1/activities</code></td>
+<td>Log an activity</td>
+</tr>
+<tr>
+<td>GET</td>
+<td><code>/api/v1/stats</code></td>
+<td>Get KPIs, pipeline breakdown, trends</td>
+</tr>
+</tbody>
+</table>
+<h3>Authentication</h3>
+<p>All API requests require a tenant API key passed via the <code>X-API-Key</code> header. Query-string API keys are intentionally rejected to avoid leaking credentials into logs, browser history, and referrer headers. Tenants generate their key at Settings &gt; API.</p>
+<h3>Calling the API Internally from a Plugin</h3>
+<p>When your plugin needs to create or read CRM data, you can call the API controllers directly without making HTTP requests. This avoids API key authentication and is more efficient:</p>
+<pre><code class="language-php">use App\Http\Controllers\Api\LeadIngestController;
+use Illuminate\Http\Request;
+
+Hooks::addAction('some.event', function ($data) {
+    // Create a synthetic request with the data
+    $request = Request::create('/api/v1/leads', 'POST', [
+        'first_name' =&gt; $data['name'],
+        'last_name'  =&gt; $data['surname'],
+        'phone'      =&gt; $data['phone'],
+        'source'     =&gt; 'my_plugin',
+    ]);
+
+    // Set the tenant on the request (required by API controllers)
+    $request-&gt;attributes-&gt;set('tenant', auth()-&gt;user()-&gt;tenant);
+
+    $controller = app(LeadIngestController::class);
+    $response = $controller-&gt;store($request);
+});
+</code></pre>
+<h3>Building External Integrations</h3>
+<p>A common plugin pattern is syncing CRM data with external services. Use the API endpoints from your external service, or dispatch queued jobs from hooks:</p>
+<pre><code class="language-php">use Illuminate\Support\Facades\Http;
+
+Hooks::addAction('deal.stage_changed', function ($deal, $oldStage) {
+    if ($deal-&gt;stage === 'closed_won') {
+        // Notify an external accounting system
+        \App\Jobs\SyncClosedDealJob::dispatch($deal);
+    }
+});
+
+// In your job class, call the external service
+// and optionally update the CRM via the API
+</code></pre>
+<h3>Extending the API</h3>
+<p>Plugins can add their own API routes alongside the core endpoints. Use <code>loadRoutes()</code> for web routes, or register API routes directly:</p>
+<pre><code class="language-php">// plugins/my-plugin/routes/api.php
+use Illuminate\Support\Facades\Route;
+
+Route::prefix('api/v1/plugin/my-plugin')-&gt;middleware('api.key')-&gt;group(function () {
+    Route::get('/custom-data', [MyPluginApiController::class, 'index']);
+    Route::post('/webhook', [MyPluginApiController::class, 'webhook']);
+});
+</code></pre>
+<p>Load the API routes in your <code>boot.php</code>:</p>
+<pre><code class="language-php">public function boot(): void
+{
+    // Load web routes (auto-prefixed with plugin/{slug})
+    $this-&gt;loadRoutes(__DIR__ . '/routes/web.php');
+
+    // Load API routes (manually registered for API prefix)
+    if (file_exists(__DIR__ . '/routes/api.php')) {
+        require __DIR__ . '/routes/api.php';
+    }
+}
+</code></pre>
+<h3>Using the AI Service from Plugins</h3>
+<p>If the tenant has AI enabled, plugins can use the <code>AiService</code> to generate content, analyze data, or build AI-powered features:</p>
+<pre><code class="language-php">use App\Services\AiService;
+
+Hooks::addAction('deal.stage_changed', function ($deal, $oldStage) {
+    try {
+        $tenant = $deal-&gt;tenant ?? \App\Models\Tenant::find($deal-&gt;tenant_id);
+        $ai = new AiService($tenant);
+
+        if ($ai-&gt;isAvailable() &amp;&amp; $deal-&gt;stage === 'dispositions') {
+            // Auto-generate a deal summary for the buyer sheet
+            $analysis = $ai-&gt;analyzeDeal($deal);
+            // Store or email the analysis...
+        }
+    } catch (\Throwable $e) {
+        \Log::error(&quot;[MyPlugin] AI analysis failed: &quot; . $e-&gt;getMessage());
+    }
+});
+</code></pre>
+<p>The <code>AiService</code> exposes these methods:</p>
+<p><strong>Lead &amp; Activity:</strong></p>
+<ul>
+<li><code>isAvailable(): bool</code> — Check if AI is configured and enabled</li>
+<li><code>draftFollowUp(Lead $lead, string $type): string</code> — Generate follow-up content. Supported types: <code>sms</code>, <code>email</code>, <code>voicemail</code>, <code>call</code>, <code>direct_mail</code>, <code>note</code>, <code>meeting</code>. Automatically injects the logged-in user's name and tenant company name.</li>
+<li><code>summarizeNotes(Lead $lead): string</code> — Summarize activity history with motivation level and next steps</li>
+<li><code>scoreLeadMotivation(Lead $lead): array</code> — Returns <code>['score' =&gt; int, 'confidence' =&gt; string, 'factors' =&gt; array, 'recommendation' =&gt; string]</code>. Score is saved to <code>ai_motivation_score</code> (separate from the automated <code>motivation_score</code>).</li>
+<li><code>qualifyLead(Lead $lead, ?string $listType = null): array</code> — Returns <code>['temperature' =&gt; 'hot|warm|cold', 'reasoning' =&gt; string]</code></li>
+<li><code>flagDncRisks(Lead $lead): array</code> — Returns <code>['risk_level' =&gt; string, 'flags' =&gt; array, 'recommendation' =&gt; string]</code></li>
+<li><code>generateObjectionResponses(Lead $lead, ?string $specificObjection = null): string</code> — Tailored objection handling scripts</li>
+<li><code>suggestTasks(Lead $lead): array</code> — Returns array of <code>['title' =&gt; string, 'days_from_now' =&gt; int, 'priority' =&gt; 'high|medium|low', 'reason' =&gt; string]</code></li>
+</ul>
+<p><strong>Property:</strong></p>
+<ul>
+<li><code>suggestOfferStrategy(Property $property): string</code> — Offer strategy with negotiation tactics</li>
+<li><code>generatePropertyDescription(Property $property): string</code> — Marketing-ready property description</li>
+</ul>
+<p><strong>Deals &amp; Pipeline:</strong></p>
+<ul>
+<li><code>analyzeDeal(Deal $deal): string</code> — Risk/opportunity assessment with scoring and recommendations</li>
+<li><code>adviseDealStage(Deal $deal): string</code> — Stage-specific advice and next actions</li>
+<li><code>draftBuyerMessage(Deal $deal, Buyer $buyer): string</code> — Buyer outreach email with caller identity</li>
+<li><code>explainBuyerMatch(Deal $deal, Buyer $buyer, ?DealBuyerMatch $match = null): string</code> — Explain why buyer matches deal</li>
+</ul>
+<p><strong>Sequences:</strong></p>
+<ul>
+<li><code>draftSequenceStep(string $sequenceName, int $stepNumber, int $totalSteps, string $actionType, int $delayDays, ?string $previousStepSummary): string</code> — Generate drip sequence message template with merge tags</li>
+<li><code>generateAllSequenceSteps(string $sequenceName, array $steps): array</code> — Bulk generate templates for all steps, returns array of strings</li>
+</ul>
+<p><strong>Reporting &amp; Import:</strong></p>
+<ul>
+<li><code>generateWeeklyDigest(array $kpiData): string</code> — Natural language summary of weekly business KPIs</li>
+<li><code>suggestCsvMapping(array $headers, array $sampleRows): array</code> — Returns <code>[columnIndex =&gt; 'crm_field_name', ...]</code></li>
+</ul>
+<p><strong>Formatting Helper:</strong></p>
+<ul>
+<li><code>\Fmt::currency($amount)</code> — Locale-aware currency formatting based on tenant settings</li>
+<li><code>\Fmt::area($sqft)</code> — Converts to tenant's measurement system (sq ft or m²)</li>
+<li><code>\Fmt::date($datetime)</code> — Formats date per tenant preference</li>
+</ul>
+<p>The AI provider (OpenAI, Anthropic, Gemini, Ollama, or Custom OpenAI-compatible) is configured per-tenant at Settings &gt; AI. All AI outputs are clean (no preamble or commentary) and ready to use directly in the CRM.</p>
+<h3>Translations / i18n</h3>
+<p>The CRM uses Laravel's <code>__()</code> helper with JSON language files for multi-language support. 774 core strings are translated into 7 languages (English, Dutch, German, French, Spanish, Portuguese, Italian). System enum labels (lead statuses, deal stages, property types, etc.) are translated at the source via <code>CustomFieldService</code> and <code>Deal::stageLabels()</code>.</p>
+<p>If your plugin adds Blade views with user-visible text, wrap strings with <code>__()</code> for translation support:</p>
+<pre><code class="language-php">// In your plugin Blade views:
+&lt;h3&gt;{{ __('My Plugin Dashboard') }}&lt;/h3&gt;
+&lt;button&gt;{{ __('Generate Report') }}&lt;/button&gt;
+</code></pre>
+<p>Users can add translations for your plugin strings by including them in their <code>lang/xx.json</code> files or via the built-in <strong>Language Editor</strong> at Settings &gt; Languages. Any string not found in the translation file falls back to the English key.</p>
+<p>If your plugin displays system values (like lead statuses or deal stages), use the translated helpers rather than raw slug formatting:</p>
+<pre><code class="language-php">// WRONG - displays raw slug without translation
+{{ ucfirst(str_replace('_', ' ', $deal-&gt;stage)) }}
+
+// CORRECT - uses translated label
+{{ \App\Models\Deal::stageLabel($deal-&gt;stage) }}
+
+// CustomFieldService labels are already translated when retrieved
+@foreach(\App\Services\CustomFieldService::getOptions('lead_status') as $val =&gt; $label)
+    &lt;option value=&quot;{{ $val }}&quot;&gt;{{ $label }}&lt;/option&gt;  {{-- $label is already translated --}}
+@endforeach
+</code></pre>
+<h3>Tags System</h3>
+<p>The CRM includes a polymorphic tagging system that plugins can leverage. Tags can be attached to leads and deals via the <code>Tag</code> model with <code>morphToMany</code> relationships.</p>
+<pre><code class="language-php">use App\Models\Tag;
+use App\Models\Lead;
+
+// Get all tags for a lead
+$lead = Lead::find($id);
+$tags = $lead-&gt;tags; // Collection of Tag models
+
+// Attach a tag
+$tag = Tag::where('name', 'VIP')-&gt;first();
+$lead-&gt;tags()-&gt;syncWithoutDetaching([$tag-&gt;id]);
+
+// Detach a tag
+$lead-&gt;tags()-&gt;detach($tag-&gt;id);
+
+// Create a tag (tenant-scoped, reuses existing by name)
+$tag = Tag::firstOrCreate(
+    ['tenant_id' =&gt; $tenantId, 'name' =&gt; 'Priority'],
+    ['color' =&gt; 'red']
+);
+</code></pre>
+<p>Available tag colors: <code>blue</code>, <code>green</code>, <code>red</code>, <code>yellow</code>, <code>purple</code>, <code>orange</code>, <code>cyan</code>, <code>pink</code>, <code>dark</code>.</p>
+<p>Tags are also visible on Lead Kanban cards and can be used for filtering and segmentation in plugin views.</p>
+<h3>Calendar Events</h3>
+<p>Plugins can hook into calendar events by creating tasks or activities with the appropriate dates. The calendar displays:</p>
+<ul>
+<li><strong>Tasks</strong> with <code>due_date</code> — shown as blue events</li>
+<li><strong>Activities</strong> of type <code>meeting</code> or <code>call</code> — shown as green/purple events</li>
+</ul>
+<pre><code class="language-php">use App\Models\Task;
+
+// Create a task that appears on the calendar
+Task::create([
+    'tenant_id' =&gt; $tenantId,
+    'lead_id' =&gt; $leadId,
+    'agent_id' =&gt; $agentId,
+    'title' =&gt; 'Plugin-created follow-up',
+    'due_date' =&gt; now()-&gt;addDays(3)-&gt;format('Y-m-d'),
+]);
+</code></pre>
+<h3>Registering Custom 2FA Providers</h3>
+<p>Plugins can register custom two-factor authentication providers via the Integration Framework. Implement the <code>TwoFactorProviderInterface</code> and register it with the <code>IntegrationManager</code>:</p>
+<pre><code class="language-php">use App\Contracts\Integrations\TwoFactorProviderInterface;
+use App\Integrations\IntegrationManager;
+use App\Models\User;
+
+class Duo2faProvider implements TwoFactorProviderInterface
+{
+    public function driver(): string { return 'duo'; }
+    public function name(): string { return 'Duo Security'; }
+
+    public function beginSetup(User $user): array
+    {
+        // Return data needed for your setup view
+        return ['enrollment_url' =&gt; '...'];
+    }
+
+    public function confirmSetup(User $user, array $input): bool
+    {
+        // Verify enrollment, save credentials, return true on success
+        $user-&gt;update([
+            'two_factor_enabled' =&gt; true,
+            'two_factor_provider' =&gt; 'duo',
+            'two_factor_secret' =&gt; Crypt::encryptString($duoUserId),
+            'two_factor_recovery_codes' =&gt; encrypt($this-&gt;generateRecoveryCodes()),
+        ]);
+        return true;
+    }
+
+    public function generateRecoveryCodes(): array
+    {
+        return array_map(fn() =&gt; strtoupper(bin2hex(random_bytes(4))) . '-' . strtoupper(bin2hex(random_bytes(4))), range(1, 8));
+    }
+
+    public function verify(User $user, string $code): bool
+    {
+        // Verify code against Duo API
+        return $this-&gt;duoApi-&gt;verify($user, $code);
+    }
+
+    public function challengeView(): string { return 'plugin-duo-2fa::challenge'; }
+    public function setupView(): string { return 'plugin-duo-2fa::setup'; }
+    public function requiresConfig(): bool { return true; }
+
+    public function configFields(): array
+    {
+        return [
+            ['key' =&gt; 'integration_key', 'label' =&gt; 'Integration Key', 'type' =&gt; 'text'],
+            ['key' =&gt; 'secret_key', 'label' =&gt; 'Secret Key', 'type' =&gt; 'password'],
+            ['key' =&gt; 'api_hostname', 'label' =&gt; 'API Hostname', 'type' =&gt; 'url'],
+        ];
+    }
+}
+</code></pre>
+<p>Register in your plugin's <code>register()</code> method:</p>
+<pre><code class="language-php">public function register(): void
+{
+    app(IntegrationManager::class)-&gt;registerDriver('2fa', 'duo', Duo2faProvider::class);
+}
+</code></pre>
+<p>The provider will automatically appear in the admin's Settings &gt; Integrations tab. The admin enables it, configures any required API keys, and it becomes available to users during 2FA setup.</p>
+<h3>Registering Custom SSO Providers</h3>
+<p>Plugins can add SSO (Single Sign-On) providers by implementing <code>SsoProviderInterface</code>:</p>
+<pre><code class="language-php">use App\Contracts\Integrations\SsoProviderInterface;
+use App\Contracts\Integrations\SsoResult;
+use App\Models\Tenant;
+use Illuminate\Http\Request;
+
+class GoogleOAuthProvider implements SsoProviderInterface
+{
+    public function driver(): string { return 'google-oauth'; }
+    public function name(): string { return 'Google Workspace'; }
+
+    public function redirectUrl(Tenant $tenant, array $config): string
+    {
+        // Build the Google OAuth redirect URL using $config['client_id']
+        return 'https://accounts.google.com/o/oauth2/v2/auth?' . http_build_query([
+            'client_id' =&gt; $config['client_id'],
+            'redirect_uri' =&gt; route('sso.callback', ['driver' =&gt; 'google-oauth']),
+            'response_type' =&gt; 'code',
+            'scope' =&gt; 'email profile',
+            'state' =&gt; csrf_token(),
+        ]);
+    }
+
+    public function handleCallback(Tenant $tenant, array $config, Request $request): SsoResult
+    {
+        // Exchange code for token, fetch user info
+        $userInfo = $this-&gt;fetchGoogleUser($request-&gt;code, $config);
+
+        return new SsoResult(
+            email: $userInfo['email'],
+            name: $userInfo['name'],
+            attributes: ['google_id' =&gt; $userInfo['sub']],
+        );
+    }
+
+    public function requiresConfig(): bool { return true; }
+
+    public function configFields(): array
+    {
+        return [
+            ['key' =&gt; 'client_id', 'label' =&gt; 'Client ID', 'type' =&gt; 'text'],
+            ['key' =&gt; 'client_secret', 'label' =&gt; 'Client Secret', 'type' =&gt; 'password'],
+        ];
+    }
+}
+</code></pre>
+<p>Register in your plugin:</p>
+<pre><code class="language-php">public function register(): void
+{
+    app(IntegrationManager::class)-&gt;registerDriver('sso', 'google-oauth', GoogleOAuthProvider::class);
+}
+</code></pre>
+<p>SSO login buttons will automatically appear on the login page for tenants that have enabled the provider. The SSO flow handles user matching by email within the tenant, and respects 2FA if enabled.</p>
+<h3>Registering Custom SMS Providers</h3>
+<p>Plugins can add SMS providers by implementing <code>SmsProviderInterface</code>:</p>
+<pre><code class="language-php">use App\Contracts\Integrations\SmsProviderInterface;
+
+class TwilioSmsProvider implements SmsProviderInterface
+{
+    public function driver(): string { return 'twilio'; }
+    public function name(): string { return 'Twilio SMS'; }
+
+    public function send(string $to, string $message): bool
+    {
+        // Get tenant config
+        $tenant = auth()-&gt;user()-&gt;tenant;
+        $integration = \App\Models\Integration::where('tenant_id', $tenant-&gt;id)
+            -&gt;where('category', 'sms')
+            -&gt;where('driver', 'twilio')
+            -&gt;where('is_active', true)
+            -&gt;first();
+
+        if (!$integration) {
+            return false;
+        }
+
+        $config = $integration-&gt;config; // Decrypted automatically
+        $client = new \Twilio\Rest\Client($config['account_sid'], $config['auth_token']);
+        $client-&gt;messages-&gt;create($to, [
+            'from' =&gt; $config['from_number'],
+            'body' =&gt; $message,
+        ]);
+
+        return true;
+    }
+
+    public function requiresConfig(): bool { return true; }
+
+    public function configFields(): array
+    {
+        return [
+            ['key' =&gt; 'account_sid', 'label' =&gt; 'Account SID', 'type' =&gt; 'text'],
+            ['key' =&gt; 'auth_token', 'label' =&gt; 'Auth Token', 'type' =&gt; 'password'],
+            ['key' =&gt; 'from_number', 'label' =&gt; 'From Number', 'type' =&gt; 'text'],
+        ];
+    }
+}
+</code></pre>
+<p>Register in your plugin:</p>
+<pre><code class="language-php">public function register(): void
+{
+    app(IntegrationManager::class)-&gt;registerDriver('sms', 'twilio', TwilioSmsProvider::class);
+}
+</code></pre>
+<p>Once registered and configured by the tenant admin at Settings &gt; Integrations, the <code>SmsService</code> will automatically use the active SMS provider for all outbound SMS (sequences, notifications, etc.).</p>
+<h3>Using the SMS Service</h3>
+<p>Send SMS from anywhere in your plugin:</p>
+<pre><code class="language-php">use App\Services\SmsService;
+
+$sms = app(SmsService::class);
+$sms-&gt;send('+15551234567', 'Hello from InsulaCRM!');
+</code></pre>
+<h3>Using the Cache Service</h3>
+<p>The <code>CacheService</code> provides tenant-scoped caching:</p>
+<pre><code class="language-php">use App\Services\CacheService;
+
+$cache = app(CacheService::class);
+
+// Cache a value for 5 minutes
+$value = $cache-&gt;remember('my_plugin.data', 300, function () {
+    return DB::table('my_table')-&gt;count();
+});
+
+// Forget a cached value
+$cache-&gt;forget('my_plugin.data');
+</code></pre>
+<h3>Using the Storage Service</h3>
+<p>The <code>StorageService</code> respects per-tenant storage configuration (local or S3):</p>
+<pre><code class="language-php">use App\Services\StorageService;
+
+$storage = app(StorageService::class);
+
+// Store a file
+$path = $storage-&gt;store($uploadedFile, 'plugin-files');
+
+// Get file URL
+$url = $storage-&gt;url($path);
+
+// Delete a file
+$storage-&gt;delete($path);
+</code></pre>
+<h3>Integration Framework Overview</h3>
+<p>The CRM provides three layers of extensibility:</p>
+<table>
+<thead>
+<tr>
+<th>Layer</th>
+<th>Purpose</th>
+<th>How to Use</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Plugins</strong></td>
+<td>Extend CRM features (UI, hooks, widgets)</td>
+<td>Install plugin via ZIP or <code>plugins/</code> directory</td>
+</tr>
+<tr>
+<td><strong>Integrations</strong></td>
+<td>Connect external auth/service providers</td>
+<td>Register driver via <code>IntegrationManager</code></td>
+</tr>
+<tr>
+<td><strong>REST API</strong></td>
+<td>Programmatic data access</td>
+<td>Use 20 API endpoints with tenant API key</td>
+</tr>
+<tr>
+<td><strong>Webhooks</strong></td>
+<td>Event-driven external notifications</td>
+<td>Configure at Settings &gt; Webhooks</td>
+</tr>
+</tbody>
+</table>
+<p>The Integration Framework uses typed contracts (<code>TwoFactorProviderInterface</code>, <code>SsoProviderInterface</code>, <code>SmsProviderInterface</code>) with a central <code>IntegrationManager</code> that handles driver registration, tenant-specific config resolution, and encrypted credential storage.</p>
+<p>Additional services available to plugins:</p>
+<ul>
+<li><strong>SmsService</strong> — Send SMS via the active provider</li>
+<li><strong>StorageService</strong> — File operations on the tenant's configured disk (local/S3)</li>
+<li><strong>CacheService</strong> — Tenant-scoped caching with automatic key namespacing</li>
+</ul>
+<h3>Embeddable Web Form</h3>
+<p>The CRM includes a public lead capture form at <code>/forms/{api_key}</code> that can be embedded via iframe. Plugins that generate landing pages or marketing campaigns can direct form submissions to this URL, or use the <code>POST /api/v1/leads</code> endpoint directly for programmatic lead creation.</p>
+<hr />
+<h2>HelloWorld Plugin Walkthrough</h2>
+<p>The included <code>hello-world</code> plugin is the simplest possible example. Here is a complete breakdown.</p>
+<h3>File: plugins/hello-world/plugin.json</h3>
+<pre><code class="language-json">{
+    &quot;name&quot;: &quot;Hello World&quot;,
+    &quot;slug&quot;: &quot;hello-world&quot;,
+    &quot;version&quot;: &quot;1.0.0&quot;,
+    &quot;author&quot;: &quot;System&quot;,
+    &quot;description&quot;: &quot;A sample plugin demonstrating the plugin architecture.&quot;
+}
+</code></pre>
+<p>This manifest registers the plugin with slug <code>hello-world</code>, matching the directory name.</p>
+<h3>File: plugins/hello-world/boot.php</h3>
+<pre><code class="language-php">&lt;?php
+
+use App\Facades\Hooks;
+
+// Example: Log when a lead is created
+Hooks::addAction('lead.created', function ($lead) {
+    \Illuminate\Support\Facades\Log::info(
+        &quot;[HelloWorld Plugin] New lead created: {$lead-&gt;first_name} {$lead-&gt;last_name}&quot;
+    );
+});
+
+// Example: Log when a deal stage changes
+Hooks::addAction('deal.stage_changed', function ($deal, $oldStage) {
+    \Illuminate\Support\Facades\Log::info(
+        &quot;[HelloWorld Plugin] Deal #{$deal-&gt;id} moved from {$oldStage} to {$deal-&gt;stage}&quot;
+    );
+});
+</code></pre>
+<h3>What Happens at Runtime</h3>
+<ol>
+<li><code>PluginManager::bootAll()</code> finds the <code>hello-world</code> record in the <code>plugins</code> table with <code>is_active = true</code>.</li>
+<li>It loads <code>plugins/hello-world/boot.php</code> via <code>require_once</code>.</li>
+<li>Two callbacks are registered on the <code>lead.created</code> and <code>deal.stage_changed</code> hooks.</li>
+<li>When a user creates a lead, <code>LeadController</code> calls <code>Hooks::doAction('lead.created', $lead)</code>.</li>
+<li>The HookManager finds the registered callback and invokes it, writing a log entry to <code>storage/logs/laravel.log</code>.</li>
+</ol>
+<p>You can verify the plugin is working by creating a lead and checking the log:</p>
+<pre><code class="language-bash">tail -f storage/logs/laravel.log | grep &quot;HelloWorld&quot;
+</code></pre>
+<hr />
+<h2>Advanced Plugin Example</h2>
+<p>Below is a more complete plugin that uses BasePlugin to add a sidebar link, a dashboard widget, custom routes, and hook listeners.</p>
+<h3>plugins/deal-analytics/plugin.json</h3>
+<pre><code class="language-json">{
+    &quot;name&quot;: &quot;Deal Analytics&quot;,
+    &quot;slug&quot;: &quot;deal-analytics&quot;,
+    &quot;version&quot;: &quot;1.0.0&quot;,
+    &quot;author&quot;: &quot;Your Company&quot;,
+    &quot;description&quot;: &quot;Adds a deal analytics dashboard and tracks stage change metrics.&quot;
+}
+</code></pre>
+<h3>plugins/deal-analytics/boot.php</h3>
+<pre><code class="language-php">&lt;?php
+
+use App\Plugins\BasePlugin;
+use App\Services\HookManager;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+
+class DealAnalyticsPlugin extends BasePlugin
+{
+    public function register(): void
+    {
+        // Register action hooks
+        $this-&gt;hooks-&gt;addAction('deal.stage_changed', [$this, 'trackStageChange']);
+        $this-&gt;hooks-&gt;addAction('lead.created', [$this, 'incrementLeadCounter']);
+    }
+
+    public function boot(): void
+    {
+        $this-&gt;addMenuItem('Deal Analytics', 'plugin.deal-analytics.index', 'fas fa-chart-line');
+        $this-&gt;addDashboardWidget('deal-analytics::widget', 25);
+        $this-&gt;addSettingsTab('Analytics', 'deal-analytics::settings');
+        $this-&gt;loadRoutes(__DIR__ . '/routes/web.php');
+        $this-&gt;registerMigrations(__DIR__ . '/database/migrations');
+    }
+
+    public function trackStageChange($deal, $oldStage): void
+    {
+        try {
+            DB::table('deal_stage_metrics')-&gt;insert([
+                'deal_id'   =&gt; $deal-&gt;id,
+                'tenant_id' =&gt; $deal-&gt;tenant_id,
+                'from_stage' =&gt; $oldStage,
+                'to_stage'   =&gt; $deal-&gt;stage,
+                'changed_at' =&gt; now(),
+            ]);
+        } catch (\Throwable $e) {
+            Log::error(&quot;[DealAnalytics] Failed to track stage change: &quot; . $e-&gt;getMessage());
+        }
+    }
+
+    public function incrementLeadCounter($lead): void
+    {
+        try {
+            DB::table('analytics_counters')
+                -&gt;where('tenant_id', $lead-&gt;tenant_id)
+                -&gt;where('metric', 'leads_created')
+                -&gt;increment('count');
+        } catch (\Throwable $e) {
+            Log::error(&quot;[DealAnalytics] Failed to increment lead counter: &quot; . $e-&gt;getMessage());
+        }
+    }
+}
+
+// Bootstrap
+$hooks = app(HookManager::class);
+$manifest = json_decode(file_get_contents(__DIR__ . '/plugin.json'), true);
+$plugin = new DealAnalyticsPlugin($hooks, __DIR__, $manifest);
+$plugin-&gt;register();
+$plugin-&gt;boot();
+</code></pre>
+<hr />
+<h2>Packaging and Distribution</h2>
+<p>Plugins are distributed as ZIP files containing the plugin directory.</p>
+<h3>Creating a Plugin ZIP</h3>
+<pre><code class="language-bash">cd plugins/
+zip -r my-plugin-1.0.0.zip my-plugin/
+</code></pre>
+<p>The ZIP file should extract to a single directory matching the plugin slug:</p>
+<pre><code>my-plugin-1.0.0.zip
+  my-plugin/
+    plugin.json
+    boot.php
+    src/
+    ...
+</code></pre>
+<h3>Installation Steps</h3>
+<ol>
+<li>Extract the ZIP into the <code>plugins/</code> directory so that <code>plugins/{slug}/plugin.json</code> exists.</li>
+<li>Insert a record into the <code>plugins</code> database table:</li>
+</ol>
+<pre><code class="language-php">use App\Models\Plugin;
+
+$manifest = json_decode(file_get_contents(base_path('plugins/my-plugin/plugin.json')), true);
+
+Plugin::create([
+    'tenant_id'    =&gt; $tenantId,
+    'name'         =&gt; $manifest['name'],
+    'slug'         =&gt; $manifest['slug'],
+    'version'      =&gt; $manifest['version'],
+    'author'       =&gt; $manifest['author'],
+    'description'  =&gt; $manifest['description'],
+    'is_active'    =&gt; true,
+    'installed_at' =&gt; now(),
+]);
+</code></pre>
+<ol start="3">
+<li>The plugin will boot on the next request.</li>
+</ol>
+<h3>Pre-Distribution Checklist</h3>
+<ul>
+<li><input disabled="" type="checkbox"> <code>plugin.json</code> contains all required fields</li>
+<li><input disabled="" type="checkbox"> <code>slug</code> in <code>plugin.json</code> matches the directory name</li>
+<li><input disabled="" type="checkbox"> <code>boot.php</code> exists and is free of syntax errors</li>
+<li><input disabled="" type="checkbox"> All hook callbacks are wrapped in try/catch</li>
+<li><input disabled="" type="checkbox"> No hardcoded tenant IDs or file paths</li>
+<li><input disabled="" type="checkbox"> Migrations are idempotent (use <code>if not exists</code> or similar guards)</li>
+<li><input disabled="" type="checkbox"> No <code>dd()</code>, <code>dump()</code>, or <code>var_dump()</code> calls left in code</li>
+<li><input disabled="" type="checkbox"> Tested with plugin disabled to confirm the core CRM is unaffected</li>
+</ul>
+<hr />
+<h2>Security Considerations</h2>
+<h3>Tenant Scoping</h3>
+<p>This is a multi-tenant CRM. Every database query in your plugin <strong>must</strong> be scoped to the current tenant. Never access data belonging to other tenants.</p>
+<pre><code class="language-php">// WRONG - accesses all tenants' data
+$leads = DB::table('leads')-&gt;get();
+
+// CORRECT - scope to current tenant
+$leads = DB::table('leads')-&gt;where('tenant_id', auth()-&gt;user()-&gt;tenant_id)-&gt;get();
+</code></pre>
+<p>If you use Eloquent models that already apply tenant scoping via global scopes, this is handled automatically. But raw queries and the query builder require explicit tenant filtering.</p>
+<h3>Error Handling</h3>
+<p>The <code>PluginManager</code> wraps the initial <code>require_once</code> of <code>boot.php</code> in a try/catch, so a broken plugin will not crash the entire application. However, <strong>hook callbacks execute later during the request lifecycle</strong> and are not individually wrapped by the core.</p>
+<p>Always wrap your callback logic in try/catch:</p>
+<pre><code class="language-php">Hooks::addAction('lead.created', function ($lead) {
+    try {
+        // Your logic
+    } catch (\Throwable $e) {
+        \Log::error(&quot;[MyPlugin] Error handling lead.created: &quot; . $e-&gt;getMessage());
+    }
+});
+</code></pre>
+<p>If your callback throws an uncaught exception, it will propagate up and may cause a 500 error for the user.</p>
+<h3>Input Validation</h3>
+<p>Never trust data passed to your hooks without validation. Even though the core application validates input before firing hooks, other plugins could fire the same hooks with arbitrary data.</p>
+<pre><code class="language-php">Hooks::addAction('lead.created', function ($lead) {
+    if (!$lead instanceof \App\Models\Lead) {
+        return;
+    }
+    // Safe to proceed
+});
+</code></pre>
+<h3>Filesystem Access</h3>
+<ul>
+<li>Only read and write files within your plugin directory (<code>plugins/{slug}/</code>).</li>
+<li>Never modify core application files.</li>
+<li>Use Laravel's <code>Storage</code> facade for user-uploaded files rather than direct filesystem access.</li>
+</ul>
+<h3>Avoid Blocking Operations</h3>
+<p>Hook callbacks run synchronously during the HTTP request. For long-running tasks (API calls, large data processing), dispatch a queued job instead:</p>
+<pre><code class="language-php">Hooks::addAction('deal.stage_changed', function ($deal, $oldStage) {
+    \App\Jobs\SyncDealToExternalCRM::dispatch($deal, $oldStage);
+});
+</code></pre>
+<h3>No Direct SQL Mutations on Core Tables</h3>
+<p>Prefer using Eloquent models and their built-in validation over raw <code>DB::statement()</code> calls against core CRM tables. If you must add columns, do so through a migration and test thoroughly.</p>
+<hr />
+<h2>Troubleshooting</h2>
+<h3>Plugin is not loading</h3>
+<ol>
+<li>Verify the <code>plugins</code> table has a row with <code>is_active = 1</code> and the correct <code>slug</code>.</li>
+<li>Confirm <code>plugins/{slug}/boot.php</code> exists on disk.</li>
+<li>Check <code>storage/logs/laravel.log</code> for warnings like <code>Plugin {slug}: boot.php not found</code>.</li>
+</ol>
+<h3>Hook callback is not firing</h3>
+<ol>
+<li>Confirm the hook name is spelled correctly (e.g., <code>lead.created</code>, not <code>leads.created</code>).</li>
+<li>Check that the plugin's <code>is_active</code> is <code>true</code> in the database.</li>
+<li>Verify the hook is actually fired in the code path you expect (see the <a href="#available-action-hooks">Available Action Hooks</a> section for locations).</li>
+<li>Add a <code>\Log::info()</code> as the first line of your callback to confirm registration.</li>
+</ol>
+<h3>Plugin causes a 500 error</h3>
+<ol>
+<li>Check <code>storage/logs/laravel.log</code> for the exception trace.</li>
+<li>Wrap all callback logic in try/catch.</li>
+<li>Temporarily set <code>is_active = false</code> in the <code>plugins</code> table to disable the plugin without removing files.</li>
+</ol>
+<h3>Checking loaded plugins</h3>
+<p>You can inspect which plugins are currently loaded:</p>
+<pre><code class="language-php">$manager = app(\App\Services\PluginManager::class);
+$loaded = $manager-&gt;getLoaded(); // Returns array of Plugin models keyed by slug
+</code></pre>
+
+            </article>
+        </main>
+    </div>
+</body>
+</html>

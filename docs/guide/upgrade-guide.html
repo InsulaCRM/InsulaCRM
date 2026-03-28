@@ -1,0 +1,300 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Upgrade Guide | InsulaCRM</title>
+    <style>
+        :root {
+            color-scheme: light;
+            --bg: #f4f1ea;
+            --surface: #ffffff;
+            --border: #d6cec0;
+            --text: #1f1e1a;
+            --muted: #6c675d;
+            --accent: #0f5b6d;
+            --accent-soft: #dff1f5;
+            --code-bg: #f7f7f8;
+        }
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            font-family: Georgia, "Times New Roman", serif;
+            background: linear-gradient(180deg, #f8f5ef 0%, var(--bg) 100%);
+            color: var(--text);
+            line-height: 1.65;
+        }
+        .layout {
+            display: grid;
+            grid-template-columns: 280px minmax(0, 1fr);
+            min-height: 100vh;
+        }
+        .sidebar {
+            background: #12343b;
+            color: #f4f4f1;
+            padding: 32px 24px;
+            position: sticky;
+            top: 0;
+            align-self: start;
+            min-height: 100vh;
+        }
+        .sidebar h1 {
+            font-size: 1.25rem;
+            margin: 0 0 8px;
+            font-family: "Segoe UI", sans-serif;
+        }
+        .sidebar p {
+            margin: 0 0 24px;
+            color: #c9dcde;
+            font-size: 0.95rem;
+            font-family: "Segoe UI", sans-serif;
+        }
+        .sidebar ul {
+            list-style: none;
+            margin: 0;
+            padding: 0;
+            display: grid;
+            gap: 10px;
+        }
+        .sidebar a {
+            display: block;
+            text-decoration: none;
+            color: #eef7f8;
+            padding: 10px 12px;
+            border-radius: 10px;
+            font-family: "Segoe UI", sans-serif;
+            transition: background-color 0.15s ease;
+        }
+        .sidebar a:hover,
+        .sidebar a.active {
+            background: rgba(255,255,255,0.12);
+        }
+        .content {
+            padding: 40px 48px 56px;
+        }
+        .article {
+            max-width: 980px;
+            margin: 0 auto;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            padding: 40px 44px;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.06);
+        }
+        h1, h2, h3, h4 {
+            line-height: 1.2;
+            color: #132026;
+        }
+        h1 { font-size: 2.2rem; margin-top: 0; }
+        h2 {
+            font-size: 1.5rem;
+            margin-top: 2.4rem;
+            padding-top: 0.4rem;
+            border-top: 1px solid #ece4d6;
+        }
+        h3 { font-size: 1.18rem; margin-top: 1.6rem; }
+        p, li { font-size: 1rem; }
+        a { color: var(--accent); }
+        code {
+            font-family: Consolas, Monaco, monospace;
+            background: var(--code-bg);
+            padding: 0.12rem 0.35rem;
+            border-radius: 4px;
+            font-size: 0.94em;
+        }
+        pre {
+            background: #0f1720;
+            color: #f8fafc;
+            padding: 16px;
+            border-radius: 12px;
+            overflow-x: auto;
+            font-size: 0.92rem;
+        }
+        pre code {
+            background: transparent;
+            padding: 0;
+            color: inherit;
+        }
+        blockquote {
+            margin: 1.5rem 0;
+            padding: 0.8rem 1rem;
+            border-left: 4px solid var(--accent);
+            background: var(--accent-soft);
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 1.5rem 0;
+            font-size: 0.96rem;
+        }
+        th, td {
+            border: 1px solid var(--border);
+            padding: 10px 12px;
+            text-align: left;
+            vertical-align: top;
+        }
+        th {
+            background: #f5efe2;
+            font-family: "Segoe UI", sans-serif;
+        }
+        hr {
+            border: 0;
+            border-top: 1px solid var(--border);
+            margin: 2rem 0;
+        }
+        @media (max-width: 960px) {
+            .layout { grid-template-columns: 1fr; }
+            .sidebar {
+                position: static;
+                min-height: auto;
+            }
+            .content {
+                padding: 20px;
+            }
+            .article {
+                padding: 24px 20px;
+                border-radius: 16px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="layout">
+        <aside class="sidebar">
+            <h1>InsulaCRM Docs</h1>
+            <p>Documentation included with this release.</p>
+            <ul><li><a href="index.html">Documentation Home</a></li><li><a href="overview.html">Overview</a></li><li><a href="installation-guide.html">Installation Guide</a></li><li><a href="upgrade-guide.html" class="active">Upgrade Guide</a></li><li><a href="changelog.html">Changelog</a></li><li><a href="plugin-development.html">Plugin Development</a></li><li><a href="credits.html">Credits</a></li></ul>
+        </aside>
+        <main class="content">
+            <article class="article markdown-body">
+                <h1>Upgrade Guide</h1>
+<p>Use this process for normal upgrades. A full reinstall is not required.</p>
+<h2>Preferred Upgrade Path</h2>
+<p>If you are running v1.0.1 or later, the safest path is now the built-in updater:</p>
+<p>Before updating production, test the same release on a staging copy of your CRM whenever possible. Confirm that your plugins, integrations, customizations, queues, and critical workflows still behave as expected, then schedule the production update.</p>
+<ol>
+<li>Open <code>Settings &gt; System</code></li>
+<li>Upload the official InsulaCRM release ZIP</li>
+<li>Review the staged package warnings</li>
+<li>Click <code>Backup and Apply Update</code></li>
+</ol>
+<p>The product will:</p>
+<ul>
+<li>create a fresh database backup automatically</li>
+<li>create a recovery snapshot immediately before patching begins</li>
+<li>preserve <code>.env</code>, <code>storage/</code>, <code>public/storage</code>, and <code>plugins/</code></li>
+<li>place the app into maintenance mode briefly</li>
+<li>patch the application files</li>
+<li>run migrations and cache clears</li>
+<li>run a post-update health check</li>
+</ul>
+<h2>About Recovery Snapshots</h2>
+<p>Recovery snapshots are point-in-time restore points created immediately before the updater starts patching your CRM. They exist to recover the last known-good state if an upgrade fails badly.</p>
+<p>Use snapshots carefully:</p>
+<ul>
+<li>restore a snapshot only when necessary</li>
+<li>restoring a snapshot replaces code and database changes created after the snapshot time</li>
+<li>the best time to create a snapshot is right before the upgrade starts so the amount of later data you might lose stays as small as possible</li>
+<li>when you apply or restore an update or snapshot from the UI, keep the page open until the process finishes; the product now shows a waiting overlay and blocks duplicate submits to reduce operator error</li>
+<li>snapshot restores support <code>.sql</code> and <code>.sql.gz</code> database backups on Windows as well as Linux</li>
+</ul>
+<p>Admins can also create manual recovery snapshots from <code>Settings &gt; System</code> before risky maintenance, custom development, or major configuration changes. Use the same rule there: create the snapshot as late as possible so it represents the most recent safe state.</p>
+<p>Use the manual process below only when you cannot use the in-app updater.</p>
+<h2>Before You Start</h2>
+<p>Back up the following before replacing any files:</p>
+<ul>
+<li>database</li>
+<li><code>.env</code></li>
+<li><code>storage/</code></li>
+<li>uploaded files</li>
+<li>custom plugins or local modifications</li>
+</ul>
+<p>If you do not have a staging environment, treat the automatic database backup created by the built-in updater as your minimum safety requirement and perform the production upgrade during a low-risk maintenance window.</p>
+<p>If you use the built-in backup tool, run:</p>
+<pre><code class="language-bash">php artisan backup:run
+</code></pre>
+<h2>Manual Upgrade Steps</h2>
+<ol>
+<li>Download the latest InsulaCRM release from the website.</li>
+<li>Put the application into maintenance mode if your deployment process requires it:
+<pre><code class="language-bash">php artisan down
+</code></pre>
+</li>
+<li>Replace the application files with the new release while preserving:
+<ul>
+<li><code>.env</code></li>
+<li><code>storage/</code></li>
+<li><code>plugins/</code></li>
+<li>any custom uploads or deployment-specific files</li>
+</ul>
+</li>
+<li>If you are deploying from source or intentionally rebuilding dependencies, run:
+<pre><code class="language-bash">composer install --no-dev --optimize-autoloader
+</code></pre>
+</li>
+<li>Run the deployment helper (recommended) or the upgrade commands manually:
+<pre><code class="language-bash"># Option A: deployment helper (runs all steps including OPcache flush)
+bash scripts/deploy.sh
+
+# Option B: manual commands
+php artisan migrate --force
+php artisan optimize:clear
+php artisan queue:restart
+sudo systemctl reload php8.4-fpm   # flush OPcache — adjust for your PHP version
+</code></pre>
+</li>
+<li>Bring the application back online:
+<pre><code class="language-bash">php artisan up
+</code></pre>
+</li>
+<li>Verify login, dashboard, settings, and plugin behavior.</li>
+</ol>
+<h2>Important Notes</h2>
+<ul>
+<li>Do not rerun the installer for a normal upgrade.</li>
+<li>Do not overwrite your <code>.env</code> file.</li>
+<li>Do not delete <code>storage/</code> or user uploads.</li>
+<li>The built-in updater is designed to reduce risk by taking a backup and a recovery snapshot before patching and preserving protected runtime paths.</li>
+<li>The built-in updater reduces upgrade risk, but it does not replace staging validation for production environments.</li>
+<li>The packaged release already includes runtime dependencies, so Composer is optional unless you are rebuilding dependencies or deploying from source.</li>
+<li>The app version is read from the root <code>VERSION</code> file, and the System tab can compare it against the latest release metadata published on the website.</li>
+<li>If <code>storage/installed.lock</code> is missing but the application database already contains the expected tenant and user records, InsulaCRM will recreate the marker automatically instead of forcing the installer again.</li>
+</ul>
+<h2>Recommended Post-Upgrade Checks</h2>
+<ul>
+<li>Confirm the login page and dashboard load</li>
+<li>Confirm background workers were restarted</li>
+<li>Confirm <code>APP_URL</code> still matches the public URL</li>
+<li>Confirm installed plugins are still present and compatible</li>
+</ul>
+<h2>Version-Specific Notes</h2>
+<h3>Upgrading to v1.0.1</h3>
+<p>Security and quality audit release. Includes the new permissions system, performance indexes, and security fixes.</p>
+<ol>
+<li>Run <code>php artisan migrate --force</code> to apply new migrations.</li>
+<li>Run <code>php artisan db:seed --class=Database\\Seeders\\BaseSeeder --force</code> to ensure default roles exist with the <code>is_system</code> flag.</li>
+<li>Clear caches and restart queue workers.</li>
+</ol>
+<h3>Permissions System</h3>
+<p>v1.0.1 introduced granular permissions. Existing roles are migrated with their default permission sets:</p>
+<ul>
+<li><strong>Admin</strong>: all permissions granted</li>
+<li><strong>Agent</strong>: leads, properties, pipeline, calendar, profile</li>
+<li><strong>Acquisition Agent</strong>: leads, properties, pipeline, calendar, profile</li>
+<li><strong>Disposition Agent</strong>: pipeline, buyers, calendar, profile</li>
+<li><strong>Field Scout</strong>: properties view/create, profile</li>
+</ul>
+<p>Custom roles created after the migration start with no permissions and should be configured in <strong>Settings &gt; Roles &amp; Permissions</strong>.</p>
+<h2>Troubleshooting Upgrades</h2>
+<ul>
+<li><strong>Migration fails</strong>: Check <code>storage/logs/laravel.log</code> for the specific error. Common causes are missing PHP extensions, database connection issues, or insufficient permissions.</li>
+<li><strong>Blank page after upgrade</strong>: Clear all caches and verify <code>APP_KEY</code> is set in <code>.env</code>.</li>
+<li><strong>Queue jobs failing</strong>: Restart all queue workers after upgrading. Old serialized jobs may be incompatible with new code.</li>
+<li><strong>Unexpected installer redirect</strong>: Verify the existing production database is still connected and contains the tenant/user data. The install marker should be recreated automatically for a healthy existing installation.</li>
+</ul>
+
+            </article>
+        </main>
+    </div>
+</body>
+</html>

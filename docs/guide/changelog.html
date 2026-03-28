@@ -1,0 +1,264 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Changelog | InsulaCRM</title>
+    <style>
+        :root {
+            color-scheme: light;
+            --bg: #f4f1ea;
+            --surface: #ffffff;
+            --border: #d6cec0;
+            --text: #1f1e1a;
+            --muted: #6c675d;
+            --accent: #0f5b6d;
+            --accent-soft: #dff1f5;
+            --code-bg: #f7f7f8;
+        }
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            font-family: Georgia, "Times New Roman", serif;
+            background: linear-gradient(180deg, #f8f5ef 0%, var(--bg) 100%);
+            color: var(--text);
+            line-height: 1.65;
+        }
+        .layout {
+            display: grid;
+            grid-template-columns: 280px minmax(0, 1fr);
+            min-height: 100vh;
+        }
+        .sidebar {
+            background: #12343b;
+            color: #f4f4f1;
+            padding: 32px 24px;
+            position: sticky;
+            top: 0;
+            align-self: start;
+            min-height: 100vh;
+        }
+        .sidebar h1 {
+            font-size: 1.25rem;
+            margin: 0 0 8px;
+            font-family: "Segoe UI", sans-serif;
+        }
+        .sidebar p {
+            margin: 0 0 24px;
+            color: #c9dcde;
+            font-size: 0.95rem;
+            font-family: "Segoe UI", sans-serif;
+        }
+        .sidebar ul {
+            list-style: none;
+            margin: 0;
+            padding: 0;
+            display: grid;
+            gap: 10px;
+        }
+        .sidebar a {
+            display: block;
+            text-decoration: none;
+            color: #eef7f8;
+            padding: 10px 12px;
+            border-radius: 10px;
+            font-family: "Segoe UI", sans-serif;
+            transition: background-color 0.15s ease;
+        }
+        .sidebar a:hover,
+        .sidebar a.active {
+            background: rgba(255,255,255,0.12);
+        }
+        .content {
+            padding: 40px 48px 56px;
+        }
+        .article {
+            max-width: 980px;
+            margin: 0 auto;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            padding: 40px 44px;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.06);
+        }
+        h1, h2, h3, h4 {
+            line-height: 1.2;
+            color: #132026;
+        }
+        h1 { font-size: 2.2rem; margin-top: 0; }
+        h2 {
+            font-size: 1.5rem;
+            margin-top: 2.4rem;
+            padding-top: 0.4rem;
+            border-top: 1px solid #ece4d6;
+        }
+        h3 { font-size: 1.18rem; margin-top: 1.6rem; }
+        p, li { font-size: 1rem; }
+        a { color: var(--accent); }
+        code {
+            font-family: Consolas, Monaco, monospace;
+            background: var(--code-bg);
+            padding: 0.12rem 0.35rem;
+            border-radius: 4px;
+            font-size: 0.94em;
+        }
+        pre {
+            background: #0f1720;
+            color: #f8fafc;
+            padding: 16px;
+            border-radius: 12px;
+            overflow-x: auto;
+            font-size: 0.92rem;
+        }
+        pre code {
+            background: transparent;
+            padding: 0;
+            color: inherit;
+        }
+        blockquote {
+            margin: 1.5rem 0;
+            padding: 0.8rem 1rem;
+            border-left: 4px solid var(--accent);
+            background: var(--accent-soft);
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 1.5rem 0;
+            font-size: 0.96rem;
+        }
+        th, td {
+            border: 1px solid var(--border);
+            padding: 10px 12px;
+            text-align: left;
+            vertical-align: top;
+        }
+        th {
+            background: #f5efe2;
+            font-family: "Segoe UI", sans-serif;
+        }
+        hr {
+            border: 0;
+            border-top: 1px solid var(--border);
+            margin: 2rem 0;
+        }
+        @media (max-width: 960px) {
+            .layout { grid-template-columns: 1fr; }
+            .sidebar {
+                position: static;
+                min-height: auto;
+            }
+            .content {
+                padding: 20px;
+            }
+            .article {
+                padding: 24px 20px;
+                border-radius: 16px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="layout">
+        <aside class="sidebar">
+            <h1>InsulaCRM Docs</h1>
+            <p>Documentation included with this release.</p>
+            <ul><li><a href="index.html">Documentation Home</a></li><li><a href="overview.html">Overview</a></li><li><a href="installation-guide.html">Installation Guide</a></li><li><a href="upgrade-guide.html">Upgrade Guide</a></li><li><a href="changelog.html" class="active">Changelog</a></li><li><a href="plugin-development.html">Plugin Development</a></li><li><a href="credits.html">Credits</a></li></ul>
+        </aside>
+        <main class="content">
+            <article class="article markdown-body">
+                <h1>Changelog</h1>
+<h2>1.0.0 - 2026-03-28</h2>
+<p>Initial open-source release.</p>
+<h3>Core</h3>
+<ul>
+<li>Multi-tenant architecture with role-based access and 33 permissions across 9 groups</li>
+<li>Dual business mode (wholesale | realestate) with mode selection during installation</li>
+<li>Web installer with server requirement checks, database setup, and demo data seeding</li>
+</ul>
+<h3>Lead Management</h3>
+<ul>
+<li>Lead management with kanban board, bulk actions, CSV import/export, and stacking detection</li>
+<li>Contact type segmentation (seller, buyer, active client, past client) in real estate mode</li>
+<li>Global keyboard shortcuts, recently viewed tracking, quick-add FAB</li>
+<li>Column sorting, saved filter views, inline status changes</li>
+<li>Lead assignment history with timeline of all changes and claim attempts</li>
+<li>CSV import with preview, saved column mappings, and duplicate handling</li>
+</ul>
+<h3>Deal Pipeline</h3>
+<ul>
+<li>Deal pipeline with stage tracking, document uploads, and buyer matching</li>
+<li>Real estate pipeline with 11 stages from lead through closing</li>
+<li>Disposition room for managing buyer outreach with status tracking and bulk actions (wholesale mode)</li>
+<li>Inline quick-edit on pipeline cards, stage SLA warnings</li>
+</ul>
+<h3>Buyers &amp; Properties</h3>
+<ul>
+<li>Buyer database with criteria matching and automated notifications</li>
+<li>Buyer verification with proof-of-funds upload and automated scoring</li>
+<li>Buyer transaction logging for track record</li>
+<li>Public buyer portal with property showcase, self-registration, and custom branding</li>
+<li>Property management with comparable sales and due diligence tracking</li>
+<li>CMA tool for real estate mode, ARV worksheet for wholesale mode</li>
+</ul>
+<h3>AI Features</h3>
+<ul>
+<li>AI-powered lead scoring, motivation analysis, and auto-qualification</li>
+<li>AI briefings on lead, deal, and buyer pages with cached responses</li>
+<li>AI lead snapshot, deal analysis, stage advice, DNC risk check</li>
+<li>AI email drafting, subject line generator, objection responses, offer strategy</li>
+<li>AI pipeline health dashboard widget</li>
+<li>AI smart routing distribution method</li>
+<li>Scheduled AI pipeline digest, follow-up suggestions, and stale deal alerts</li>
+<li>Support for OpenAI, Claude, Gemini, and Ollama providers</li>
+</ul>
+<h3>Automation</h3>
+<ul>
+<li>Email sequences with automated drip campaigns</li>
+<li>Workflow automation engine with event triggers, step builder, delays, and run logs</li>
+<li>5 pre-built workflow templates for common follow-up sequences (real estate mode)</li>
+<li>Campaign tracker for marketing spend, lead attribution, and ROI</li>
+</ul>
+<h3>Documents &amp; Reporting</h3>
+<ul>
+<li>Document template system with merge fields and deal-based generation</li>
+<li>Listing marketing kit with AI-generated content (real estate mode)</li>
+<li>Investor packet with property overview, ARV summary, and comps (wholesale mode)</li>
+<li>Built-in reporting with PDF export</li>
+<li>Goal tracking with forecasting, progress bars, and AI recommendations</li>
+</ul>
+<h3>Communication &amp; Notifications</h3>
+<ul>
+<li>Activity logging across calls, emails, SMS, voicemail, direct mail, and notes</li>
+<li>Global activity inbox with type, agent, date, and entity filters</li>
+<li>Webhook integrations with HMAC signature verification</li>
+<li>Morning summary, expiring contingencies, and inactive client digests</li>
+<li>Notification delivery preferences (instant email or daily digest)</li>
+</ul>
+<h3>Administration</h3>
+<ul>
+<li>Custom roles and permissions management</li>
+<li>Dashboard customization with per-role tenant defaults</li>
+<li>Multi-language support with built-in translation editor</li>
+<li>Two-factor authentication with enforced 2FA option</li>
+<li>SSO support</li>
+<li>Safe update manager with ZIP upload, staging, and automatic backup</li>
+<li>Manual recovery snapshots with restore capability</li>
+<li>GDPR compliance tools</li>
+<li>S3-compatible cloud storage support</li>
+<li>Automated database backups</li>
+<li>Plugin system with hooks, filters, and extension points</li>
+<li>Dark mode with per-user theme preference</li>
+<li>Do Not Contact list management</li>
+<li>Calendar with iCal feed sync</li>
+<li>Showings and open house management (real estate mode)</li>
+<li>PWA support with service worker and offline fallback</li>
+<li>Error logging and bug report viewer</li>
+<li>API with key authentication and request logging</li>
+</ul>
+
+            </article>
+        </main>
+    </div>
+</body>
+</html>
