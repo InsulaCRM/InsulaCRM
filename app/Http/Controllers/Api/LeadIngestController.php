@@ -61,6 +61,15 @@ class LeadIngestController extends Controller
 
         $data = $validator->validated();
 
+        // Normalize identity fields before duplicate detection so formatting
+        // differences do not create duplicate seller records.
+        if (isset($data['phone']) && $data['phone'] !== null) {
+            $data['phone'] = trim($data['phone']);
+        }
+        if (isset($data['email']) && $data['email'] !== null) {
+            $data['email'] = strtolower(trim($data['email']));
+        }
+
         // Resolve lead source: explicit source > utm_source > 'api'
         $leadSource = $this->resolveLeadSource($data, $tenant);
 
@@ -86,7 +95,10 @@ class LeadIngestController extends Controller
             'status'     => 'new',
             'temperature' => 'warm',
             'notes'      => $this->buildNotes($data),
-            'custom_fields' => $data['custom_fields'] ?? [],
+            'custom_fields' => array_merge(
+                $data['custom_fields'] ?? [],
+                !empty($data['external_id']) ? ['external_id' => $data['external_id']] : []
+            ),
         ]);
 
         // Auto-detect timezone from property zip
@@ -306,10 +318,24 @@ class LeadIngestController extends Controller
      */
     private function findDuplicate(array $data, $tenant): ?Lead
     {
-        if (!empty($data['phone'])) {
+        if (!empty($data['external_id'])) {
             $match = Lead::withoutGlobalScopes()
                 ->where('tenant_id', $tenant->id)
-                ->where('phone', $data['phone'])
+                ->where('custom_fields->external_id', $data['external_id'])
+                ->first();
+            if ($match) return $match;
+        }
+
+        if (!empty($data['phone'])) {
+            $normalizedPhone = preg_replace('/\D+/', '', $data['phone']);
+            $match = Lead::withoutGlobalScopes()
+                ->where('tenant_id', $tenant->id)
+                ->where(function ($query) use ($data, $normalizedPhone) {
+                    $query->where('phone', $data['phone']);
+                    if ($normalizedPhone !== '') {
+                        $query->orWhereRaw("REGEXP_REPLACE(phone, '[^0-9]', '') = ?", [$normalizedPhone]);
+                    }
+                })
                 ->first();
             if ($match) return $match;
         }
