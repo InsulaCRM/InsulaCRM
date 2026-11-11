@@ -28,8 +28,10 @@ class PropertyTest extends TestCase
             'repair_estimate' => 30000,
         ]);
 
-        // MAO = (ARV * 0.70) - Repair = (200000 * 0.70) - 30000 = 110000
-        $this->assertEquals(110000, $property->mao);
+        // Default wholesale economics for an unknown-condition property:
+        // 5% transaction + 4% holding + 3% financing + 3% risk + 10% profit = 25%.
+        // Buyer ceiling = 200000 - 50000 = 150000; seller ceiling = 150000 - 30000 = 120000.
+        $this->assertEquals(120000, $property->mao);
     }
 
     public function test_assignment_fee_computed_attribute(): void
