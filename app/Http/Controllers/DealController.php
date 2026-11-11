@@ -139,6 +139,37 @@ class DealController extends Controller
             'logged_at' => now(),
         ]);
 
+        \App\Services\WebhookService::dispatch('deal.intake.created', [
+            'deal_id' => $deal->id,
+            'lead_id' => $deal->lead_id,
+            'stage' => $deal->stage,
+            'property_state' => $deal->property_state,
+            'property_county' => $deal->property_county,
+            'buyer_type' => $deal->buyer_type,
+            'buyer_legal_name' => $deal->buyer_legal_name,
+            'transaction_structure' => $deal->transaction_structure,
+            'attorney_approved_template_id' => $deal->attorney_approved_template_id,
+            'executed_contract_status' => $deal->executed_contract_status,
+            'assignment_rights_confirmed' => $deal->assignment_rights_confirmed,
+            'earnest_money' => $deal->earnest_money,
+            'emd_required' => $deal->emd_required,
+            'emd_source' => $deal->emd_source,
+            'buyer_covers_emd' => $deal->buyer_covers_emd,
+            'emd_funding_confirmed' => $deal->emd_funding_confirmed,
+            'emd_exception_reason' => $deal->emd_exception_reason,
+            'closing_provider_type' => $deal->closing_provider_type,
+            'buyer_preferred_closing_provider' => $deal->buyer_preferred_closing_provider,
+            'seller_preferred_closing_provider' => $deal->seller_preferred_closing_provider,
+            'confirmed_closing_provider' => $deal->confirmed_closing_provider,
+            'contract_review_status' => $deal->contract_review_status,
+            'no_buyer_status' => $deal->no_buyer_status,
+            'extension_termination_review_status' => $deal->extension_termination_review_status,
+            'contract_price' => $deal->contract_price,
+            'contract_date' => $deal->contract_date?->toDateString(),
+            'due_diligence_end_date' => $deal->due_diligence_end_date?->toDateString(),
+            'closing_date' => $deal->closing_date?->toDateString(),
+        ], auth()->user()->tenant_id);
+
         return redirect()->route('deals.show', $deal)->with('success', __('Deal intake saved. Contract gate remains required before Under Contract.'));
     }
 
