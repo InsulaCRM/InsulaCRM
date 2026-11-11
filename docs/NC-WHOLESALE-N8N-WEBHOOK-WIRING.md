@@ -70,3 +70,13 @@ This workflow prepares the disposition package; it does not represent a buyer as
 - `NC-Wholesale-Buyer-Response-Classifier.json` accepts inbound buyer messages, classifies common intents (interested, question, not interested, callback, opt-out), and updates the matching record.
 - `STOP`, `UNSUBSCRIBE`, `CANCEL`, `REMOVE`, and `DO NOT CONTACT` stop the matching outreach record.
 - A buyer response is never treated as a binding commitment automatically. Explicit confirmation remains required.
+
+
+## Buyer commitment
+
+- `NC-Wholesale-Buyer-Commitment-Handoff.json` accepts an explicit buyer confirmation.
+- The CRM endpoint `POST /api/v1/deals/{id}/buyer-commitment` requires the matching buyer/match, an eligible prior response, an approved Contract Protection Gate, and explicit confirmation.
+- A buyer commitment cannot be created from an opt-out or stopped outreach record.
+- Only one buyer can be committed to a deal at a time.
+- Successful commitment stores `committed_buyer_id` and `buyer_committed_at`, moves the wholesale deal to `buyer_committed`, and emits `deal.buyer.committed`.
+- This does not represent a completed assignment or closing; those remain separate authorized transaction steps.
