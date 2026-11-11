@@ -274,6 +274,12 @@ class LeadIngestController extends Controller
             ]);
         });
 
+        if ($deal === null) {
+            return response()->json([
+                'error' => 'A property is required before converting this seller lead into a wholesale deal.',
+            ], 422);
+        }
+
         if ($deal->wasRecentlyCreated === false) {
             return response()->json([
                 'success' => true,
