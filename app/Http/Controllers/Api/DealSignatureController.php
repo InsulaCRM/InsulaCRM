@@ -60,6 +60,7 @@ class DealSignatureController extends Controller
             'signers.*.widgets' => 'nullable|array',
             'widgets' => 'nullable|array',
             'options' => 'nullable|array',
+            'options.force_resend' => 'nullable|boolean',
         ]);
 
         if ($validator->fails()) {
@@ -75,6 +76,26 @@ class DealSignatureController extends Controller
             ->where('tenant_id', $tenant->id)
             ->where('deal_id', $deal->id)
             ->findOrFail($data['generated_document_id']);
+
+        $forceResend = (bool) ($data['options']['force_resend'] ?? false);
+
+        if (!$forceResend) {
+            $activeRequest = DealSignatureRequest::withoutGlobalScopes()
+                ->where('tenant_id', $tenant->id)
+                ->where('deal_id', $deal->id)
+                ->where('generated_document_id', $document->id)
+                ->whereIn('status', ['sending', 'sent', 'viewed', 'partially_signed'])
+                ->latest('id')
+                ->first();
+
+            if ($activeRequest) {
+                return response()->json([
+                    'success' => true,
+                    'signature_request' => $activeRequest,
+                    'message' => 'An active OpenSign signature request already exists for this document. Set options.force_resend=true to create another request.',
+                ], 200);
+            }
+        }
 
         try {
             $signatureRequest = $service->createSignatureRequest(
