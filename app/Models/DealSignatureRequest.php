@@ -15,6 +15,7 @@ class DealSignatureRequest extends Model
         'title',
         'status',
         'opensign_object_id',
+        'opensign_template_id',
         'signers',
         'signing_urls',
         'source_pdf_path',
