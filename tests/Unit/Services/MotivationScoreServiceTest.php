@@ -116,7 +116,7 @@ class MotivationScoreServiceTest extends TestCase
         $this->assertEquals(10, $score);
     }
 
-    public function test_provider_list_type_adds_list_bonus_when_not_already represented(): void
+    public function test_provider_list_type_adds_list_bonus_when_not_already_represented(): void
     {
         $lead = $this->createLead([
             'temperature' => 'cold',
