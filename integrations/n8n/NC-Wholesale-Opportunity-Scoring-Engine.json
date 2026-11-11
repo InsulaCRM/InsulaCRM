@@ -12,18 +12,24 @@
       "name": "Opportunity Score Request",
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 2,
-      "position": [0, 0],
+      "position": [
+        0,
+        0
+      ],
       "webhookId": "nc-wholesale-opportunity-score"
     },
     {
       "parameters": {
-        "jsCode": "const b = $json.body || $json;\nconst p = b.property || b;\nconst l = b.lead || {};\nconst distress = Array.isArray(p.distress_markers) ? p.distress_markers.map(x => String(x).toLowerCase()) : [];\nconst value = Number(p.after_repair_value || p.estimated_value || 0);\nconst repairs = Number(p.repair_estimate || 0);\nconst ask = Number(p.asking_price || 0);\nconst equity = Number(p.equity || 0);\nlet score = 0; const factors = [];\nconst distressWeights = {pre_foreclosure:10,tax_delinquent:8,probate:8,code_violation:7,vacant:6,absentee_owner:5,tired_landlord:5,high_equity:5,distressed:8,vacant_land:5};\nlet distressScore = 0; for (const d of distress) distressScore += distressWeights[d] || 2; distressScore = Math.min(30, distressScore); score += distressScore; if (distressScore) factors.push({name:'distress',points:distressScore});\nlet equityScore = 0; if (equity > 0 && value > 0) equityScore = Math.min(20, Math.max(0, (equity/value)*20)); else if (String(l.equity_level||'').toLowerCase()==='high') equityScore=15; score += equityScore; if(equityScore) factors.push({name:'equity',points:Math.round(equityScore*10)/10});\nlet priceScore=0, priceRatio=null; if(ask>0 && value>0){priceRatio=ask/value; priceScore=Math.max(0,Math.min(20,(0.95-priceRatio)*133.33)); score+=priceScore; factors.push({name:'price_to_value',points:Math.round(priceScore*10)/10});}\nlet rehabScore=0; if(value>0 && repairs>0) rehabScore=Math.min(10,(repairs/value)*20); else if(String(p.condition||'').toLowerCase().match(/poor|fair|distressed|major/)) rehabScore=6; score+=rehabScore; if(rehabScore) factors.push({name:'rehab_signal',points:Math.round(rehabScore*10)/10});\nlet contactScore=0; if(l.phone && !l.do_not_contact) contactScore=5; else if(l.email && !l.do_not_contact) contactScore=3; score+=contactScore; if(contactScore) factors.push({name:'contactability',points:contactScore});\nlet marketScore=0; const targetCities=new Set(['hickory','charlotte','raleigh','wilmington']); if(targetCities.has(String(p.city||'').toLowerCase())) marketScore=5; score+=marketScore; if(marketScore) factors.push({name:'target_market',points:marketScore});\nscore=Math.round(Math.min(100,score));\nconst mao=value>0 && repairs>=0 ? (value*0.70)-repairs : null;\nconst spread=mao!==null && ask>0 ? mao-ask : null;\nlet action=score>=75?'pursue_now':score>=55?'review_and_contact':score>=35?'nurture':'low_priority';\nif(l.do_not_contact) action='do_not_contact';\nconst result={opportunity_score:score,action,score_factors:factors,arv:value||null,repair_estimate:repairs||null,asking_price:ask||null,mao:mao!==null?Math.round(mao*100)/100:null,estimated_spread:spread!==null?Math.round(spread*100)/100:null,price_to_value_ratio:priceRatio!==null?Math.round(priceRatio*1000)/1000:null,scored_at:new Date().toISOString(),scoring_version:'nc-v1'};\nreturn [{json:{lead_id:Number(b.lead_id||l.id||0),property_id:Number(b.property_id||p.id||0),score:result}}];"
+        "jsCode": "const b = $json.body || $json;\nconst p = b.property || b;\nconst l = b.lead || {};\nconst distress = Array.isArray(p.distress_markers) ? p.distress_markers.map(x => String(x).toLowerCase()) : [];\nconst value = Number(p.after_repair_value || p.estimated_value || 0);\nconst repairs = Number(p.repair_estimate || 0);\nconst ask = Number(p.asking_price || 0);\nconst equity = Number(p.equity || 0);\nconst assignmentFee = Number(p.assignment_fee_target || 0);\nconst buyerMaxAllInPercent = Number(p.buyer_max_all_in_percent || 0);\nconst buyerProfitTarget = Number(p.buyer_profit_target || 0);\nconst transactionCosts = Number(p.transaction_costs || 0);\nconst holdingCosts = Number(p.holding_costs || 0);\nconst financingCosts = Number(p.financing_costs || 0);\nconst riskBuffer = Number(p.risk_buffer || 0);\n\nlet score = 0; const factors = [];\nconst distressWeights = {pre_foreclosure:10,tax_delinquent:8,probate:8,code_violation:7,vacant:6,absentee_owner:5,tired_landlord:5,high_equity:5,distressed:8,vacant_land:5};\nlet distressScore = 0; for (const d of distress) distressScore += distressWeights[d] || 2; distressScore = Math.min(30, distressScore); score += distressScore; if (distressScore) factors.push({name:'distress',points:distressScore});\nlet equityScore = 0; if (equity > 0 && value > 0) equityScore = Math.min(20, Math.max(0, (equity/value)*20)); else if (String(l.equity_level||'').toLowerCase()==='high') equityScore=15; score += equityScore; if(equityScore) factors.push({name:'equity',points:Math.round(equityScore*10)/10});\nlet priceScore=0, priceRatio=null; if(ask>0 && value>0){priceRatio=ask/value; priceScore=Math.max(0,Math.min(20,(0.95-priceRatio)*133.33)); score+=priceScore; factors.push({name:'price_to_value',points:Math.round(priceScore*10)/10);}\nlet rehabScore=0; if(value>0 && repairs>0) rehabScore=Math.min(10,(repairs/value)*20); else if(String(p.condition||'').toLowerCase().match(/poor|fair|distressed|major/)) rehabScore=6; score+=rehabScore; if(rehabScore) factors.push({name:'rehab_signal',points:Math.round(rehabScore*10)/10});\nlet contactScore=0; if(l.phone && !l.do_not_contact) contactScore=5; else if(l.email && !l.do_not_contact) contactScore=3; score+=contactScore; if(contactScore) factors.push({name:'contactability',points:contactScore});\nlet marketScore=0; const targetCities=new Set(['hickory','charlotte','raleigh','wilmington']); if(targetCities.has(String(p.city||'').toLowerCase())) marketScore=5; score+=marketScore; if(marketScore) factors.push({name:'target_market',points:marketScore});\n\nlet underwriting=null;\nif (value > 0) {\n  const benchmarkMao = (value * 0.70) - repairs;\n  const explicitBuyerCeiling = buyerMaxAllInPercent > 0 ? value * (buyerMaxAllInPercent > 1 ? buyerMaxAllInPercent / 100 : buyerMaxAllInPercent) : null;\n  const buyerEconomicsCeiling = explicitBuyerCeiling !== null\n    ? explicitBuyerCeiling\n    : value - (transactionCosts || value * 0.05) - (holdingCosts || value * 0.04) - (financingCosts || value * 0.03) - (riskBuffer || value * 0.03) - (buyerProfitTarget || value * 0.10);\n  const buyerPurchaseCeiling = Math.max(0, buyerEconomicsCeiling - repairs);\n  const sellerContractCeiling = Math.max(0, buyerPurchaseCeiling - assignmentFee);\n  const baseMao = sellerContractCeiling;\n  const spread = ask > 0 ? baseMao - ask : null;\n  const dealViable = ask > 0 ? spread >= 0 : true;\n  underwriting = {\n    strategy:p.mao_strategy || 'flip',\n    benchmark_70_percent:Math.round(Math.max(0,benchmarkMao)*100)/100,\n    buyer_max_all_in:Math.round(buyerEconomicsCeiling*100)/100,\n    buyer_purchase_ceiling:Math.round(buyerPurchaseCeiling*100)/100,\n    seller_contract_ceiling:Math.round(sellerContractCeiling*100)/100,\n    estimated_spread:spread === null ? null : Math.round(spread*100)/100,\n    deal_viable:dealViable,\n    method:explicitBuyerCeiling !== null ? 'buyer_buy_box' : 'buyer_economics',\n    assumptions:{\n      transaction_costs:Math.round((transactionCosts || value*0.05)*100)/100,\n      holding_costs:Math.round((holdingCosts || value*0.04)*100)/100,\n      financing_costs:Math.round((financingCosts || value*0.03)*100)/100,\n      risk_buffer:Math.round((riskBuffer || value*0.03)*100)/100,\n      buyer_profit_target:Math.round((buyerProfitTarget || value*0.10)*100)/100,\n      repairs:Math.round(repairs*100)/100,\n      assignment_fee:Math.round(assignmentFee*100)/100\n    }\n  };\n  if (dealViable) {\n    score += 10;\n    factors.push({name:'buyer_economics_viability',points:10});\n  } else {\n    score -= 5;\n    factors.push({name:'buyer_economics_gap',points:-5});\n  }\n}\nscore=Math.round(Math.min(100,Math.max(0,score)));\nlet action=score>=75?'pursue_now':score>=55?'review_and_contact':score>=35?'nurture':'low_priority';\nif(l.do_not_contact) action='do_not_contact';\nif(underwriting && underwriting.deal_viable === false && action === 'pursue_now') action='review_and_contact';\n\nconst result={opportunity_score:score,action,score_factors:factors,arv:value||null,repair_estimate:repairs||null,asking_price:ask||null,underwriting,scored_at:new Date().toISOString(),scoring_version:'nc-v2-adaptive-mao'};\nreturn [{json:{lead_id:Number(b.lead_id||l.id||0),property_id:Number(b.property_id||p.id||0),score:result}}];"
       },
       "id": "score",
       "name": "Calculate Opportunity Score",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [320, 0]
+      "position": [
+        320,
+        0
+      ]
     },
     {
       "parameters": {
@@ -32,39 +38,92 @@
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
-            {"name":"X-API-Key","value":"={{ $env.INSULA_API_KEY }}"},
-            {"name":"Content-Type","value":"application/json"}
+            {
+              "name": "X-API-Key",
+              "value": "={{ $env.INSULA_API_KEY }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
           ]
         },
         "sendBody": true,
-        "specifyBody":"json",
-        "jsonBody":"={{ JSON.stringify({ custom_fields: { nc_wholesale_opportunity: $json.score } }) }}",
-        "options":{"timeout":30000,"response":{"response":{"responseFormat":"json"}}}
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ custom_fields: { nc_wholesale_opportunity: $json.score } }) }}",
+        "options": {
+          "timeout": 30000,
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          }
+        }
       },
-      "id":"persist",
-      "name":"Persist Score in InsulaCRM",
-      "type":"n8n-nodes-base.httpRequest",
-      "typeVersion":4.2,
-      "position":[620,0]
+      "id": "persist",
+      "name": "Persist Score in InsulaCRM",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        620,
+        0
+      ]
     },
     {
-      "parameters":{
-        "respondWith":"json",
-        "responseBody":"={{ JSON.stringify({ success:true, lead_id:$json.lead_id, property_id:$json.property_id, score:$json.score, crm_update:$json }) }}",
-        "options":{}
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ success:true, lead_id:$json.lead_id, property_id:$json.property_id, score:$json.score, crm_update:$json }) }}",
+        "options": {}
       },
-      "id":"response",
-      "name":"Return Opportunity Score",
-      "type":"n8n-nodes-base.respondToWebhook",
-      "typeVersion":1.4,
-      "position":[920,0]
+      "id": "response",
+      "name": "Return Opportunity Score",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        920,
+        0
+      ]
     }
   ],
-  "connections":{
-    "Opportunity Score Request":{"main":[[{"node":"Calculate Opportunity Score","type":"main","index":0}]]},
-    "Calculate Opportunity Score":{"main":[[{"node":"Persist Score in InsulaCRM","type":"main","index":0}]]},
-    "Persist Score in InsulaCRM":{"main":[[{"node":"Return Opportunity Score","type":"main","index":0}]]}
+  "connections": {
+    "Opportunity Score Request": {
+      "main": [
+        [
+          {
+            "node": "Calculate Opportunity Score",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Calculate Opportunity Score": {
+      "main": [
+        [
+          {
+            "node": "Persist Score in InsulaCRM",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Persist Score in InsulaCRM": {
+      "main": [
+        [
+          {
+            "node": "Return Opportunity Score",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
   },
-  "settings":{"executionOrder":"v1","saveDataErrorExecution":"all","saveDataSuccessExecution":"all"},
-  "active":false
+  "settings": {
+    "executionOrder": "v1",
+    "saveDataErrorExecution": "all",
+    "saveDataSuccessExecution": "all"
+  },
+  "active": false
 }
