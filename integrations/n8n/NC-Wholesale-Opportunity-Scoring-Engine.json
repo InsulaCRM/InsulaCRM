@@ -1,0 +1,70 @@
+{
+  "name": "NC Wholesale - Opportunity Scoring Engine",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "nc-wholesale/opportunity-score",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "trigger",
+      "name": "Opportunity Score Request",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [0, 0],
+      "webhookId": "nc-wholesale-opportunity-score"
+    },
+    {
+      "parameters": {
+        "jsCode": "const b = $json.body || $json;\nconst p = b.property || b;\nconst l = b.lead || {};\nconst distress = Array.isArray(p.distress_markers) ? p.distress_markers.map(x => String(x).toLowerCase()) : [];\nconst value = Number(p.after_repair_value || p.estimated_value || 0);\nconst repairs = Number(p.repair_estimate || 0);\nconst ask = Number(p.asking_price || 0);\nconst equity = Number(p.equity || 0);\nlet score = 0; const factors = [];\nconst distressWeights = {pre_foreclosure:10,tax_delinquent:8,probate:8,code_violation:7,vacant:6,absentee_owner:5,tired_landlord:5,high_equity:5,distressed:8,vacant_land:5};\nlet distressScore = 0; for (const d of distress) distressScore += distressWeights[d] || 2; distressScore = Math.min(30, distressScore); score += distressScore; if (distressScore) factors.push({name:'distress',points:distressScore});\nlet equityScore = 0; if (equity > 0 && value > 0) equityScore = Math.min(20, Math.max(0, (equity/value)*20)); else if (String(l.equity_level||'').toLowerCase()==='high') equityScore=15; score += equityScore; if(equityScore) factors.push({name:'equity',points:Math.round(equityScore*10)/10});\nlet priceScore=0, priceRatio=null; if(ask>0 && value>0){priceRatio=ask/value; priceScore=Math.max(0,Math.min(20,(0.95-priceRatio)*133.33)); score+=priceScore; factors.push({name:'price_to_value',points:Math.round(priceScore*10)/10});}\nlet rehabScore=0; if(value>0 && repairs>0) rehabScore=Math.min(10,(repairs/value)*20); else if(String(p.condition||'').toLowerCase().match(/poor|fair|distressed|major/)) rehabScore=6; score+=rehabScore; if(rehabScore) factors.push({name:'rehab_signal',points:Math.round(rehabScore*10)/10});\nlet contactScore=0; if(l.phone && !l.do_not_contact) contactScore=5; else if(l.email && !l.do_not_contact) contactScore=3; score+=contactScore; if(contactScore) factors.push({name:'contactability',points:contactScore});\nlet marketScore=0; const targetCities=new Set(['hickory','charlotte','raleigh','wilmington']); if(targetCities.has(String(p.city||'').toLowerCase())) marketScore=5; score+=marketScore; if(marketScore) factors.push({name:'target_market',points:marketScore});\nscore=Math.round(Math.min(100,score));\nconst mao=value>0 && repairs>=0 ? (value*0.70)-repairs : null;\nconst spread=mao!==null && ask>0 ? mao-ask : null;\nlet action=score>=75?'pursue_now':score>=55?'review_and_contact':score>=35?'nurture':'low_priority';\nif(l.do_not_contact) action='do_not_contact';\nconst result={opportunity_score:score,action,score_factors:factors,arv:value||null,repair_estimate:repairs||null,asking_price:ask||null,mao:mao!==null?Math.round(mao*100)/100:null,estimated_spread:spread!==null?Math.round(spread*100)/100:null,price_to_value_ratio:priceRatio!==null?Math.round(priceRatio*1000)/1000:null,scored_at:new Date().toISOString(),scoring_version:'nc-v1'};\nreturn [{json:{lead_id:Number(b.lead_id||l.id||0),property_id:Number(b.property_id||p.id||0),score:result}}];"
+      },
+      "id": "score",
+      "name": "Calculate Opportunity Score",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [320, 0]
+    },
+    {
+      "parameters": {
+        "method": "PUT",
+        "url": "={{ $env.INSULA_BASE_URL }}/api/v1/leads/{{ $json.lead_id }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {"name":"X-API-Key","value":"={{ $env.INSULA_API_KEY }}"},
+            {"name":"Content-Type","value":"application/json"}
+          ]
+        },
+        "sendBody": true,
+        "specifyBody":"json",
+        "jsonBody":"={{ JSON.stringify({ custom_fields: { nc_wholesale_opportunity: $json.score } }) }}",
+        "options":{"timeout":30000,"response":{"response":{"responseFormat":"json"}}}
+      },
+      "id":"persist",
+      "name":"Persist Score in InsulaCRM",
+      "type":"n8n-nodes-base.httpRequest",
+      "typeVersion":4.2,
+      "position":[620,0]
+    },
+    {
+      "parameters":{
+        "respondWith":"json",
+        "responseBody":"={{ JSON.stringify({ success:true, lead_id:$json.lead_id, property_id:$json.property_id, score:$json.score, crm_update:$json }) }}",
+        "options":{}
+      },
+      "id":"response",
+      "name":"Return Opportunity Score",
+      "type":"n8n-nodes-base.respondToWebhook",
+      "typeVersion":1.4,
+      "position":[920,0]
+    }
+  ],
+  "connections":{
+    "Opportunity Score Request":{"main":[[{"node":"Calculate Opportunity Score","type":"main","index":0}]]},
+    "Calculate Opportunity Score":{"main":[[{"node":"Persist Score in InsulaCRM","type":"main","index":0}]]},
+    "Persist Score in InsulaCRM":{"main":[[{"node":"Return Opportunity Score","type":"main","index":0}]]}
+  },
+  "settings":{"executionOrder":"v1","saveDataErrorExecution":"all","saveDataSuccessExecution":"all"},
+  "active":false
+}
