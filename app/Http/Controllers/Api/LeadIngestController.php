@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\AuditLog;
 use App\Models\Lead;
 use App\Models\Property;
+use App\Models\Deal;
 use App\Services\AddressNormalizationService;
 use App\Services\AiService;
 use App\Services\CustomFieldService;
@@ -15,6 +16,7 @@ use App\Services\ZipTimezoneService;
 use Illuminate\Http\Request;
 use App\Notifications\LeadAssigned;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\DB;
 
 class LeadIngestController extends Controller
 {
@@ -169,6 +171,68 @@ class LeadIngestController extends Controller
             'lead_id' => $lead->id,
             'source'  => $leadSource,
             'property_id' => $property?->id,
+        ], 201);
+    }
+
+    /**
+     * POST /api/v1/leads/{id}/convert-to-deal
+     *
+     * Converts an existing seller lead and its property into the first
+     * wholesale deal record without duplicating active deals.
+     */
+    public function convertToDeal(Request $request, int $id)
+    {
+        $tenant = $request->attributes->get('tenant');
+
+        $lead = Lead::withoutGlobalScopes()
+            ->where('tenant_id', $tenant->id)
+            ->with('property')
+            ->findOrFail($id);
+
+        $activeDeal = Deal::withoutGlobalScopes()
+            ->where('tenant_id', $tenant->id)
+            ->where('lead_id', $lead->id)
+            ->whereNotIn('stage', ['closed_won', 'closed_lost'])
+            ->first();
+
+        if ($activeDeal) {
+            return response()->json([
+                'success' => true,
+                'already_exists' => true,
+                'deal_id' => $activeDeal->id,
+                'property_id' => $activeDeal->property_id,
+            ], 200);
+        }
+
+        if (!$lead->property) {
+            return response()->json([
+                'error' => 'A property is required before converting this seller lead into a wholesale deal.',
+            ], 422);
+        }
+
+        $deal = DB::transaction(function () use ($tenant, $lead, $request) {
+            return Deal::withoutGlobalScopes()->create([
+                'tenant_id' => $tenant->id,
+                'lead_id' => $lead->id,
+                'property_id' => $lead->property->id,
+                'agent_id' => $lead->agent_id,
+                'title' => $request->input('title', $lead->full_name . ' Deal'),
+                'stage' => $request->input('stage', 'prospecting'),
+                'contract_price' => $request->input('contract_price'),
+                'contract_date' => $request->input('contract_date'),
+                'notes' => $request->input('notes'),
+                'stage_changed_at' => now(),
+            ]);
+        });
+
+        AuditLog::log('lead.converted_to_deal_via_api', $deal);
+
+        return response()->json([
+            'success' => true,
+            'already_exists' => false,
+            'deal_id' => $deal->id,
+            'lead_id' => $lead->id,
+            'property_id' => $lead->property->id,
         ], 201);
     }
 
