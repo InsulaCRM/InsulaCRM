@@ -13,6 +13,7 @@ use App\Services\BuyerMatchService;
 use App\Services\DispositionPackageService;
 use App\Services\WebhookService;
 use App\Services\WholesaleClosingReadinessService;
+use App\Services\WholesaleCompletionService;
 use App\Models\TransactionChecklist;
 use App\Models\DealBuyerMatch;
 use Illuminate\Http\Request;
@@ -438,6 +439,79 @@ class DealApiController extends Controller
         }
 
         return response()->json(['success' => true, 'deal' => $deal->fresh(['committedBuyer'])]);
+    }
+
+    public function completeAssignment(Request $request, int $id)
+    {
+        $tenant = $request->attributes->get('tenant');
+        $deal = Deal::withoutGlobalScopes()->where('tenant_id', $tenant->id)->findOrFail($id);
+
+        if (!BusinessModeService::isWholesale($tenant)) {
+            return response()->json(['error' => 'Assignment completion is only available in wholesale mode.'], 422);
+        }
+
+        $validator = Validator::make($request->all(), [
+            'final_assignment_fee' => 'nullable|numeric|min:0',
+            'closing_result' => 'nullable|string|max:255',
+            'closing_result_notes' => 'nullable|string|max:5000',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['error' => 'Validation failed.', 'details' => $validator->errors()], 422);
+        }
+
+        try {
+            $deal = app(WholesaleCompletionService::class)->markAssigned(
+                $deal,
+                $validator->validated(),
+                auth()->id()
+            );
+        } catch (\RuntimeException $e) {
+            return response()->json(['error' => $e->getMessage()], 422);
+        }
+
+        return response()->json([
+            'success' => true,
+            'deal' => $deal,
+            'message' => 'Assignment completion recorded. Closing is still a separate explicit step.',
+        ]);
+    }
+
+    public function completeClosing(Request $request, int $id)
+    {
+        $tenant = $request->attributes->get('tenant');
+        $deal = Deal::withoutGlobalScopes()->where('tenant_id', $tenant->id)->findOrFail($id);
+
+        if (!BusinessModeService::isWholesale($tenant)) {
+            return response()->json(['error' => 'Closing completion is only available in wholesale mode.'], 422);
+        }
+
+        $validator = Validator::make($request->all(), [
+            'final_assignment_fee' => 'nullable|numeric|min:0',
+            'final_closing_amount' => 'nullable|numeric|min:0',
+            'closing_result' => 'nullable|string|max:255',
+            'closing_result_notes' => 'nullable|string|max:5000',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['error' => 'Validation failed.', 'details' => $validator->errors()], 422);
+        }
+
+        try {
+            $deal = app(WholesaleCompletionService::class)->markClosedWon(
+                $deal,
+                $validator->validated(),
+                auth()->id()
+            );
+        } catch (\RuntimeException $e) {
+            return response()->json(['error' => $e->getMessage()], 422);
+        }
+
+        return response()->json([
+            'success' => true,
+            'deal' => $deal,
+            'message' => 'Wholesale closing completion recorded.',
+        ]);
     }
 
     public function dispositionPackage(Request $request, int $id)
