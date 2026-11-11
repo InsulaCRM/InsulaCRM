@@ -1,0 +1,93 @@
+{
+  "name": "NC Wholesale - BatchData Property Search",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "nc-wholesale/batchdata/property-search",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "trigger",
+      "name": "Property Search Request",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [0, 0],
+      "webhookId": "nc-wholesale-batchdata-property-search"
+    },
+    {
+      "parameters": {
+        "jsCode": "const body = $json.body || $json;\nconst state = String(body.state || 'NC').toUpperCase();\nconst allowedStates = new Set(['NC']);\nif (!allowedStates.has(state)) throw new Error('This workflow is restricted to NC in the initial rollout.');\nconst filters = body.filters || {};\nreturn [{ json: { state, filters, source: 'batchdata', requested_at: new Date().toISOString() } }];"
+      },
+      "id": "normalize",
+      "name": "Normalize NC Search",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [260, 0]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.BATCHDATA_API_URL || 'https://api.batchdata.com/api/v1/property/search' }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "={{ $env.BATCHDATA_AUTH_HEADER || 'X-API-Key' }}",
+              "value": "={{ $env.BATCHDATA_API_KEY }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ state: $json.state, filters: $json.filters }) }}",
+        "options": {
+          "timeout": 60000,
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "id": "batchdata",
+      "name": "BatchData Property Search",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [560, 0]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ success: true, source: 'batchdata', data: $json }) }}",
+        "options": {}
+      },
+      "id": "response",
+      "name": "Return Search Results",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [840, 0]
+    }
+  ],
+  "connections": {
+    "Property Search Request": {
+      "main": [[{"node": "Normalize NC Search", "type": "main", "index": 0}]]
+    },
+    "Normalize NC Search": {
+      "main": [[{"node": "BatchData Property Search", "type": "main", "index": 0}]]
+    },
+    "BatchData Property Search": {
+      "main": [[{"node": "Return Search Results", "type": "main", "index": 0}]]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "saveDataErrorExecution": "all",
+    "saveDataSuccessExecution": "all"
+  },
+  "active": false
+}
