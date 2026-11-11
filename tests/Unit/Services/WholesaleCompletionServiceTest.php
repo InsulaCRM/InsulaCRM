@@ -31,6 +31,22 @@ class WholesaleCompletionServiceTest extends TestCase
         ], $overrides));
     }
 
+    public function test_assignment_completion_is_idempotent_under_repeated_retries(): void
+    {
+        $this->actingAsAdmin();
+        $deal = $this->readyDeal();
+        $service = app(WholesaleCompletionService::class);
+
+        $first = $service->markAssigned($deal, ['final_assignment_fee' => 15000], $this->adminUser->id);
+        $second = $service->markAssigned($deal->fresh(), ['final_assignment_fee' => 99999], $this->adminUser->id);
+
+        $this->assertSame($first->id, $second->id);
+        $this->assertSame('15000.00', (string) $second->final_assignment_fee);
+        $this->assertSame(1, Activity::where('deal_id', $deal->id)
+            ->where('subject', 'Wholesale assignment completed')
+            ->count());
+    }
+
     public function test_assignment_completion_is_idempotent(): void
     {
         $this->actingAsAdmin();
