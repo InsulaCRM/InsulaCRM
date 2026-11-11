@@ -46,6 +46,30 @@ class LeadIngestController extends Controller
             'property_state'   => 'nullable|string|max:2',
             'property_zip'     => 'nullable|string|max:10',
             'property_type'    => 'nullable|string|max:100',
+            'property_condition' => 'nullable|string|max:100',
+            'property_estimated_value' => 'nullable|numeric|min:0',
+            'property_repair_estimate' => 'nullable|numeric|min:0',
+            'property_after_repair_value' => 'nullable|numeric|min:0',
+            'property_asking_price' => 'nullable|numeric|min:0',
+            'property_distress_markers' => 'nullable|array',
+            'property_distress_markers.*' => 'string|max:100',
+            'property_bedrooms' => 'nullable|integer|min:0',
+            'property_bathrooms' => 'nullable|numeric|min:0',
+            'property_square_footage' => 'nullable|integer|min:0',
+
+            // Wholesale seller intelligence can arrive directly from list/data providers.
+            'distress_markers' => 'nullable|array',
+            'distress_markers.*' => 'string|max:100',
+            'list_types' => 'nullable|array',
+            'list_types.*' => 'string|max:100',
+            'high_equity' => 'nullable|boolean',
+            'vacant' => 'nullable|boolean',
+            'absentee_owner' => 'nullable|boolean',
+            'tax_delinquent' => 'nullable|boolean',
+            'probate' => 'nullable|boolean',
+            'pre_foreclosure' => 'nullable|boolean',
+            'code_violation' => 'nullable|boolean',
+            'tired_landlord' => 'nullable|boolean',
 
             // Tracking
             'utm_source'     => 'nullable|string|max:100',
@@ -124,6 +148,15 @@ class LeadIngestController extends Controller
                 'state'     => $data['property_state'] ?? null,
                 'zip_code'  => $data['property_zip'] ?? null,
                 'property_type' => $this->resolvePropertyType($data['property_type'] ?? null, $tenant),
+                'condition' => $data['property_condition'] ?? null,
+                'estimated_value' => $data['property_estimated_value'] ?? null,
+                'repair_estimate' => $data['property_repair_estimate'] ?? null,
+                'after_repair_value' => $data['property_after_repair_value'] ?? null,
+                'asking_price' => $data['property_asking_price'] ?? null,
+                'distress_markers' => $this->resolveDistressMarkers($data),
+                'bedrooms' => $data['property_bedrooms'] ?? null,
+                'bathrooms' => $data['property_bathrooms'] ?? null,
+                'square_footage' => $data['property_square_footage'] ?? null,
             ];
             $propData = AddressNormalizationService::normalizeAll($propData);
             $property = Property::create($propData);
@@ -426,6 +459,45 @@ class LeadIngestController extends Controller
         }
 
         return null;
+    }
+
+    /**
+     * Normalize distress/list signals supplied by external lead providers.
+     * Boolean flags are converted to the same marker vocabulary used by
+     * acquisition-priority scoring.
+     */
+    private function resolveDistressMarkers(array $data): array
+    {
+        $markers = [];
+
+        foreach (($data['distress_markers'] ?? []) as $marker) {
+            $markers[] = str_replace([' ', '-'], '_', strtolower(trim((string) $marker)));
+        }
+
+        foreach (($data['property_distress_markers'] ?? []) as $marker) {
+            $markers[] = str_replace([' ', '-'], '_', strtolower(trim((string) $marker)));
+        }
+
+        foreach (($data['list_types'] ?? []) as $marker) {
+            $markers[] = str_replace([' ', '-'], '_', strtolower(trim((string) $marker)));
+        }
+
+        foreach ([
+            'high_equity',
+            'vacant',
+            'absentee_owner',
+            'tax_delinquent',
+            'probate',
+            'pre_foreclosure',
+            'code_violation',
+            'tired_landlord',
+        ] as $flag) {
+            if (!empty($data[$flag])) {
+                $markers[] = $flag;
+            }
+        }
+
+        return array_values(array_unique(array_filter($markers)));
     }
 
     /**
