@@ -225,13 +225,18 @@ class LeadIngestController extends Controller
             'temperature'   => 'nullable|in:hot,warm,cold',
             'do_not_contact' => 'nullable|boolean',
             'notes'         => 'nullable|string|max:5000',
+            'custom_fields' => 'nullable|array',
         ]);
 
         if ($validator->fails()) {
             return response()->json(['error' => 'Validation failed.', 'details' => $validator->errors()], 422);
         }
 
-        $lead->update($validator->validated());
+         $validated = $validator->validated();
+        if (array_key_exists('custom_fields', $validated)) {
+            $validated['custom_fields'] = array_merge($lead->custom_fields ?? [], $validated['custom_fields']);
+        }
+        $lead->update($validated);
 
         return response()->json(['success' => true, 'lead' => $lead->fresh()->load('property')]);
     }
