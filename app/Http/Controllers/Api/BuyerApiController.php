@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\AuditLog;
 use App\Models\Buyer;
+use App\Models\DealBuyerMatch;
 use App\Services\BusinessModeService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
@@ -64,6 +65,54 @@ class BuyerApiController extends Controller
         $buyer=Buyer::withoutGlobalScopes()->create($data);
         AuditLog::log('buyer.created_via_api',$buyer);
         return response()->json(['success'=>true,'buyer_id'=>$buyer->id],201);
+    }
+
+    public function dispositionMatches(Request $request, int $id)
+    {
+        $tenant = $request->attributes->get('tenant');
+        $buyer = Buyer::withoutGlobalScopes()->where('tenant_id', $tenant->id)->findOrFail($id);
+
+        $matches = DealBuyerMatch::where('buyer_id', $buyer->id)
+            ->with('deal.lead.property')
+            ->latest()
+            ->paginate($request->integer('per_page', 25));
+
+        return response()->json($matches);
+    }
+
+    public function updateMatch(Request $request, int $id, int $matchId)
+    {
+        $tenant = $request->attributes->get('tenant');
+        $buyer = Buyer::withoutGlobalScopes()->where('tenant_id', $tenant->id)->findOrFail($id);
+
+        $match = DealBuyerMatch::where('buyer_id', $buyer->id)->findOrFail($matchId);
+
+        $validator = Validator::make($request->all(), [
+            'response_intent' => 'nullable|in:interested,question,not_interested,opt_out,wrong_number,callback',
+            'commitment_status' => 'nullable|in:none,interested,reviewing,committed,declined',
+            'response_body' => 'nullable|string|max:10000',
+            'outreach_status' => 'nullable|in:queued,sent,delivered,replied,failed,stopped',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['error' => 'Validation failed.', 'details' => $validator->errors()], 422);
+        }
+
+        $data = $validator->validated();
+
+        if (($data['response_intent'] ?? null) === 'opt_out') {
+            $data['commitment_status'] = 'declined';
+            $data['outreach_status'] = 'stopped';
+        }
+
+        if (array_key_exists('response_body', $data)) {
+            $data['response_received_at'] = now();
+            $data['responded_at'] = now();
+        }
+
+        $match->update($data);
+
+        return response()->json(['success' => true, 'match' => $match->fresh()]);
     }
 
     public function update(Request $request, int $id)
