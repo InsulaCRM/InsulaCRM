@@ -18,6 +18,7 @@ use Illuminate\Http\Request;
 use App\Notifications\LeadAssigned;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Pagination\LengthAwarePaginator;
 
 class LeadIngestController extends Controller
 {
@@ -292,19 +293,93 @@ class LeadIngestController extends Controller
             $query->where('lead_source', $request->source);
         }
 
+        if ($request->filled('state')) {
+            $query->whereHas('property', function ($propertyQuery) use ($request) {
+                $propertyQuery->where('state', strtoupper($request->state));
+            });
+        }
+
+        if ($request->filled('county')) {
+            $query->whereHas('property', function ($propertyQuery) use ($request) {
+                $propertyQuery->where('county', $request->county);
+            });
+        }
+
         if ($request->filled('since')) {
             $query->where('created_at', '>=', $request->since);
         }
 
-        $leads = $query->latest()
-            ->paginate($request->integer('per_page', 25));
+        $prioritySort = $request->input('sort') === 'acquisition_priority';
+        $priorityFilter = $request->filled('min_priority_score')
+            || $request->filled('max_priority_score')
+            || $request->filled('priority_tier');
 
-        // Add transparent acquisition-priority intelligence without storing
-        // another mutable score on the lead record.
-        $leads->getCollection()->transform(function ($lead) {
-            $lead->acquisition_priority = app(AcquisitionPriorityService::class)->score($lead);
-            return $lead;
-        });
+        // Priority filtering/sorting is calculated from live lead/property data,
+        // so it must happen before pagination to return the true top opportunities.
+        if ($prioritySort || $priorityFilter) {
+            $allLeads = $query->latest()->get();
+            $priorityService = app(AcquisitionPriorityService::class);
+
+            $allLeads->transform(function ($lead) use ($priorityService) {
+                $lead->acquisition_priority = $priorityService->score($lead);
+                return $lead;
+            });
+
+            if ($request->filled('min_priority_score')) {
+                $minimum = max(0, min(100, $request->integer('min_priority_score')));
+                $allLeads = $allLeads->filter(
+                    fn ($lead) => $lead->acquisition_priority['score'] >= $minimum
+                );
+            }
+
+            if ($request->filled('max_priority_score')) {
+                $maximum = max(0, min(100, $request->integer('max_priority_score')));
+                $allLeads = $allLeads->filter(
+                    fn ($lead) => $lead->acquisition_priority['score'] <= $maximum
+                );
+            }
+
+            if ($request->filled('priority_tier')) {
+                $tier = strtolower(trim($request->priority_tier));
+                $allLeads = $allLeads->filter(
+                    fn ($lead) => $lead->acquisition_priority['tier'] === $tier
+                );
+            }
+
+            if ($prioritySort) {
+                $allLeads = $allLeads->sortByDesc(
+                    fn ($lead) => $lead->acquisition_priority['score']
+                )->values();
+            } else {
+                $allLeads = $allLeads->values();
+            }
+
+            $perPage = max(1, min(100, $request->integer('per_page', 25)));
+            $page = max(1, $request->integer('page', 1));
+            $total = $allLeads->count();
+            $items = $allLeads->slice(($page - 1) * $perPage, $perPage)->values();
+
+            $leads = new LengthAwarePaginator(
+                $items,
+                $total,
+                $perPage,
+                $page,
+                [
+                    'path' => $request->url(),
+                    'query' => $request->query(),
+                ]
+            );
+        } else {
+            $leads = $query->latest()
+                ->paginate($request->integer('per_page', 25));
+
+            // Add transparent acquisition-priority intelligence without storing
+            // another mutable score on the lead record.
+            $leads->getCollection()->transform(function ($lead) {
+                $lead->acquisition_priority = app(AcquisitionPriorityService::class)->score($lead);
+                return $lead;
+            });
+        }
 
         return response()->json($leads);
     }
