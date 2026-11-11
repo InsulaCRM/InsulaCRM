@@ -142,6 +142,26 @@
         840,
         0
       ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{$env.NC_WHOLESALE_READINESS_WEBHOOK_URL}}",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{JSON.stringify({lead_id:$('Classify Seller Message').first().json.lead_id,classification:$('Classify Seller Message').first().json.classification})}}",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "id": "c8",
+      "name": "Trigger Seller Readiness",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        480,
+        180
+      ]
     }
   ],
   "connections": {
@@ -193,7 +213,7 @@
       "main": [
         [
           {
-            "node": "Log Inbound SMS",
+            "node": "Trigger Seller Readiness",
             "type": "main",
             "index": 0
           }
@@ -205,6 +225,17 @@
         [
           {
             "node": "Respond",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Trigger Seller Readiness": {
+      "main": [
+        [
+          {
+            "node": "Log Inbound SMS",
             "type": "main",
             "index": 0
           }
