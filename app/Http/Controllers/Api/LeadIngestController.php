@@ -257,7 +257,7 @@ class LeadIngestController extends Controller
             }
 
             if (!$lockedLead->property) {
-                throw new \RuntimeException('A property is required before converting this seller lead into a wholesale deal.');
+                return null;
             }
 
             return Deal::withoutGlobalScopes()->create([
