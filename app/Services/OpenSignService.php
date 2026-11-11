@@ -197,6 +197,28 @@ class OpenSignService
 
         $requestRecord->update($updates);
 
+        if ($event === 'completed' && !$wasCompleted) {
+            $deal = $requestRecord->deal()->withoutGlobalScopes()->firstOrFail();
+
+            $completionActivityExists = Activity::withoutGlobalScopes()
+                ->where('deal_id', $deal->id)
+                ->where('subject', 'Contract fully executed')
+                ->exists();
+
+            if (!$completionActivityExists) {
+                Activity::withoutGlobalScopes()->create([
+                    'tenant_id' => $deal->tenant_id,
+                    'lead_id' => $deal->lead_id,
+                    'deal_id' => $deal->id,
+                    'agent_id' => $deal->agent_id,
+                    'type' => 'document',
+                    'subject' => 'Contract fully executed',
+                    'body' => 'OpenSign completed the signature request for deal #' . $deal->id . '. Executed documents will be archived under ' . ($requestRecord->archive_directory ?: 'deals/' . $deal->id . '/executed') . '.',
+                    'logged_at' => now(),
+                ]);
+            }
+        }
+
         if ($event === 'completed' && (empty($requestRecord->signed_pdf_path) || empty($requestRecord->certificate_path))) {
             $this->archiveCompletedDocument($requestRecord, $payload, !$wasCompleted);
         }
@@ -213,25 +235,6 @@ class OpenSignService
         $deal = $requestRecord->deal()->withoutGlobalScopes()->with(['lead.property', 'committedBuyer'])->firstOrFail();
         $disk = Storage::disk(config('filesystems.default', 'local'));
         $directory = $requestRecord->archive_directory ?: 'deals/' . $deal->id . '/executed';
-
-        if ($emitCompletionEvent) {
-            $completionActivityExists = Activity::withoutGlobalScopes()
-                ->where('deal_id', $deal->id)
-                ->where('subject', 'Contract fully executed')
-                ->exists();
-
-            if (!$completionActivityExists) {
-                Activity::withoutGlobalScopes()->create([
-                    'tenant_id' => $deal->tenant_id,
-                    'lead_id' => $deal->lead_id,
-                    'agent_id' => $deal->agent_id,
-                    'type' => 'document',
-                    'subject' => 'Contract fully executed',
-                    'body' => 'OpenSign completed the signature request for deal #' . $deal->id . '. Executed documents were archived under ' . $directory . '.',
-                    'logged_at' => now(),
-                ]);
-            }
-        }
 
         if (empty($requestRecord->signed_pdf_path) && !empty($payload['file'])) {
             $signed = Http::timeout(60)->get($payload['file']);
