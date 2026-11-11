@@ -80,3 +80,13 @@ This workflow prepares the disposition package; it does not represent a buyer as
 - Only one buyer can be committed to a deal at a time.
 - Successful commitment stores `committed_buyer_id` and `buyer_committed_at`, moves the wholesale deal to `buyer_committed`, and emits `deal.buyer.committed`.
 - This does not represent a completed assignment or closing; those remain separate authorized transaction steps.
+
+
+## Closing readiness and handoff
+
+- `GET /api/v1/deals/{id}/closing-readiness` evaluates the wholesale closing gate.
+- The gate requires an approved Contract Protection Gate, a committed buyer, transaction structure, confirmed closing provider, closing date, required assignment rights, confirmed buyer-funded EMD when applicable, and completed/waived transaction checklist items.
+- `PUT /api/v1/deals/{id}/checklist/{itemId}` records checklist progress.
+- `POST /api/v1/deals/{id}/advance-closing` can move a buyer-committed/assigned deal to `closing` only when the readiness gate passes.
+- Successful advancement emits `deal.closing.ready`.
+- `NC-Wholesale-Closing-Ready-Handoff.json` verifies readiness and logs the handoff; it does not fabricate legal documents, alter the closing provider, or declare a closing completed.
