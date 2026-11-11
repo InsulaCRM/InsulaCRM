@@ -15,13 +15,23 @@ class WholesaleCompletionService
             return $deal->fresh(['committedBuyer']);
         }
 
-        $this->assertReadyForCompletion($deal);
-
-        if ($deal->stage !== 'closing' && $deal->stage !== 'buyer_committed' && $deal->stage !== 'assigned') {
-            throw new RuntimeException('Deal must be buyer committed, assigned, or closing before assignment completion.');
-        }
-
         return DB::transaction(function () use ($deal, $data, $userId) {
+            $deal = Deal::withoutGlobalScopes()
+                ->where('tenant_id', $deal->tenant_id)
+                ->whereKey($deal->id)
+                ->lockForUpdate()
+                ->firstOrFail();
+
+            if ($deal->completion_status === 'assignment_completed' || !empty($deal->assignment_completed_at)) {
+                return $deal->fresh(['committedBuyer']);
+            }
+
+            $this->assertReadyForCompletion($deal);
+
+            if ($deal->stage !== 'closing' && $deal->stage !== 'buyer_committed' && $deal->stage !== 'assigned') {
+                throw new RuntimeException('Deal must be buyer committed, assigned, or closing before assignment completion.');
+            }
+
             $oldStage = $deal->stage;
             $deal->update([
                 'stage' => 'assigned',
@@ -69,17 +79,27 @@ class WholesaleCompletionService
             return $deal->fresh(['committedBuyer']);
         }
 
-        $this->assertReadyForCompletion($deal);
-
-        if (!in_array($deal->stage, ['assigned', 'closing'], true)) {
-            throw new RuntimeException('Deal must be assigned or closing before it can be marked closed won.');
-        }
-
-        if (empty($deal->assignment_completed_at) && $deal->transaction_structure === 'assignment') {
-            throw new RuntimeException('Assignment completion must be recorded before an assignment deal can be closed won.');
-        }
-
         return DB::transaction(function () use ($deal, $data, $userId) {
+            $deal = Deal::withoutGlobalScopes()
+                ->where('tenant_id', $deal->tenant_id)
+                ->whereKey($deal->id)
+                ->lockForUpdate()
+                ->firstOrFail();
+
+            if ($deal->completion_status === 'closed_won' || !empty($deal->closed_won_at)) {
+                return $deal->fresh(['committedBuyer']);
+            }
+
+            $this->assertReadyForCompletion($deal);
+
+            if (!in_array($deal->stage, ['assigned', 'closing'], true)) {
+                throw new RuntimeException('Deal must be assigned or closing before it can be marked closed won.');
+            }
+
+            if (empty($deal->assignment_completed_at) && $deal->transaction_structure === 'assignment') {
+                throw new RuntimeException('Assignment completion must be recorded before an assignment deal can be closed won.');
+            }
+
             $oldStage = $deal->stage;
 
             $deal->update([
