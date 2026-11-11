@@ -1,0 +1,94 @@
+{
+  "name": "NC Wholesale - InsulaCRM Lead Ingest",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "webhook-trigger",
+      "name": "Inbound Lead",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [0, 0],
+      "webhookId": "nc-wholesale-lead-ingest",
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "nc-wholesale/lead",
+        "responseMode": "onReceived",
+        "options": {}
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const body = $json.body || $json;\nconst first = String(body.first_name || body.firstName || '').trim();\nconst last = String(body.last_name || body.lastName || '').trim();\nif (!first || !last) throw new Error('first_name and last_name are required');\nreturn [{ json: { first_name: first, last_name: last, phone: body.phone || null, email: body.email || null, source: body.source || 'n8n', notes: body.notes || null, property_address: body.property_address || body.address || null, property_city: body.property_city || body.city || null, property_state: body.property_state || body.state || 'NC', property_zip: body.property_zip || body.zip || null, property_type: body.property_type || null, external_id: body.external_id || body.source_id || null, utm_source: body.utm_source || null, utm_medium: body.utm_medium || null, utm_campaign: body.utm_campaign || null } }];"
+      },
+      "id": "normalize",
+      "name": "Normalize Lead",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [260, 0]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.INSULA_BASE_URL }}/api/v1/leads",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-API-Key",
+              "value": "={{ $env.INSULA_API_KEY }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json) }}",
+        "options": {
+          "timeout": 30000,
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "id": "insula-api",
+      "name": "Create Lead in InsulaCRM",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [540, 0]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify($json) }}",
+        "options": {}
+      },
+      "id": "response",
+      "name": "Return InsulaCRM Result",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [820, 0]
+    }
+  ],
+  "connections": {
+    "Inbound Lead": {
+      "main": [[{"node": "Normalize Lead", "type": "main", "index": 0}]]
+    },
+    "Normalize Lead": {
+      "main": [[{"node": "Create Lead in InsulaCRM", "type": "main", "index": 0}]]
+    },
+    "Create Lead in InsulaCRM": {
+      "main": [[{"node": "Return InsulaCRM Result", "type": "main", "index": 0}]]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "saveDataErrorExecution": "all",
+    "saveDataSuccessExecution": "all"
+  },
+  "active": false
+}
