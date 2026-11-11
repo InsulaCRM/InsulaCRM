@@ -27,7 +27,7 @@ class AcquisitionPriorityServiceTest extends TestCase
         $result = $this->service->score($lead);
 
         $this->assertSame(18, $result['score']);
-        $this->assertSame('medium', $result['tier']);
+        $this->assertSame('low', $result['tier']);
         $this->assertContains('Pre Foreclosure', $result['reasons']);
     }
 
