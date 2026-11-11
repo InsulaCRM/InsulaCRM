@@ -170,6 +170,36 @@ class DealController extends Controller
             'closing_date' => $deal->closing_date?->toDateString(),
         ], auth()->user()->tenant_id);
 
+        if (
+            $deal->executed_contract_status === 'executed'
+            && $deal->contract_review_status === 'approved'
+            && $deal->due_diligence_end_date
+            && $deal->closing_date
+        ) {
+            \App\Services\WebhookService::dispatch('deal.contract.ready', [
+                'deal_id' => $deal->id,
+                'lead_id' => $deal->lead_id,
+                'transaction_structure' => $deal->transaction_structure,
+                'attorney_approved_template_id' => $deal->attorney_approved_template_id,
+                'executed_contract' => true,
+                'assignment_rights_confirmed' => $deal->assignment_rights_confirmed,
+                'emd_amount' => $deal->earnest_money,
+                'emd_required' => $deal->emd_required,
+                'emd_source' => $deal->emd_source,
+                'buyer_covers_emd_confirmed' => $deal->buyer_covers_emd,
+                'emd_funding_confirmed' => $deal->emd_funding_confirmed,
+                'emd_exception_reason' => $deal->emd_exception_reason,
+                'closing_provider_type' => $deal->closing_provider_type,
+                'closing_provider_confirmed' => !empty($deal->confirmed_closing_provider),
+                'confirmed_closing_provider' => $deal->confirmed_closing_provider,
+                'buyer_preferred_closing_provider' => $deal->buyer_preferred_closing_provider,
+                'seller_preferred_closing_provider' => $deal->seller_preferred_closing_provider,
+                'due_diligence_end_date' => $deal->due_diligence_end_date?->toDateString(),
+                'closing_date' => $deal->closing_date?->toDateString(),
+                'contract_date' => $deal->contract_date?->toDateString(),
+            ], auth()->user()->tenant_id);
+        }
+
         return redirect()->route('deals.show', $deal)->with('success', __('Deal intake saved. Contract gate remains required before Under Contract.'));
     }
 
