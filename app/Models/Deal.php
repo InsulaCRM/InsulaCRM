@@ -41,6 +41,7 @@ class Deal extends Model
     protected $fillable = [
         'tenant_id',
         'lead_id',
+        'property_id',
         'property_state',
         'property_county',
         'buyer_type',
@@ -140,6 +141,11 @@ class Deal extends Model
     public function lead()
     {
         return $this->belongsTo(Lead::class);
+    }
+
+    public function property()
+    {
+        return $this->belongsTo(Property::class);
     }
 
     public function committedBuyer()
