@@ -287,6 +287,9 @@ Route::middleware(['auth', 'tenant', 'require2fa'])->group(function () {
     // ── Pipeline / Deals: all except field_scout ─────────────────────
     Route::middleware('role:admin,agent,acquisition_agent,disposition_agent,listing_agent,buyers_agent')->group(function () {
         Route::get('/pipeline/export', [DealController::class, 'export'])->name('deals.export');
+        Route::get('/pipeline/intake', [DealController::class, 'intake'])->name('deals.intake');
+        Route::get('/pipeline/intake/{lead}', [DealController::class, 'intake'])->name('deals.intake.lead');
+        Route::post('/pipeline/intake', [DealController::class, 'storeIntake'])->name('deals.intake.store');
         Route::get('/pipeline', [DealController::class, 'pipeline'])->name('pipeline');
         Route::get('/pipeline/{deal}', [DealController::class, 'show'])->name('deals.show');
         Route::put('/pipeline/{deal}', [DealController::class, 'update'])->name('deals.update');
