@@ -162,10 +162,13 @@ class SettingsController extends Controller
         $baseUrl = rtrim($request->string('opensign_base_url')->toString() ?: ($opensign['base_url'] ?? config('services.opensign.base_url')), '/');
 
         try {
+            $accountUrl = preg_replace('#/api/v1\\.2$#', '/api/v1/getuser', $baseUrl);
+            $accountUrl = $accountUrl === $baseUrl ? rtrim($baseUrl, '/') . '/getuser' : $accountUrl;
+
             $response = \Illuminate\Support\Facades\Http::acceptJson()
                 ->withHeaders(['x-api-token' => $token])
                 ->timeout(15)
-                ->get($baseUrl . '/account');
+                ->get($accountUrl);
 
             if ($response->successful()) {
                 return response()->json([
