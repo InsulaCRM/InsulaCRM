@@ -39,6 +39,8 @@ Route::prefix('v1')->middleware(['api.key', 'throttle:api', 'api.log'])->group(f
     Route::post('/buyers', [BuyerApiController::class, 'store']);
     Route::get('/buyers/{id}', [BuyerApiController::class, 'show']);
     Route::put('/buyers/{id}', [BuyerApiController::class, 'update']);
+    Route::get('/buyers/{id}/disposition-matches', [BuyerApiController::class, 'dispositionMatches']);
+    Route::put('/buyers/{id}/disposition-matches/{matchId}', [BuyerApiController::class, 'updateMatch']);
 
     // Properties
     Route::get('/properties', [PropertyApiController::class, 'index']);
