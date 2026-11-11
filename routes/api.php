@@ -32,6 +32,7 @@ Route::prefix('v1')->middleware(['api.key', 'throttle:api', 'api.log'])->group(f
     Route::get('/deals/stages', [DealApiController::class, 'stages']);
     Route::get('/deals/{id}', [DealApiController::class, 'show']);
     Route::put('/deals/{id}', [DealApiController::class, 'update']);
+    Route::get('/deals/{id}/disposition-package', [DealApiController::class, 'dispositionPackage']);
 
     // Buyers
     Route::get('/buyers', [BuyerApiController::class, 'index']);
