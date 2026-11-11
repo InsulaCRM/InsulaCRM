@@ -153,8 +153,6 @@ class DealApiController extends Controller
             'contract_date'        => 'nullable|date',
             'closing_date'         => 'nullable|date',
             'notes'                => 'nullable|string',
-        ];
-
             'property_state' => 'nullable|string|size:2',
             'property_county' => 'nullable|string|max:255',
             'buyer_type' => 'nullable|in:individual,entity',
@@ -176,6 +174,8 @@ class DealApiController extends Controller
             'no_buyer_status' => 'nullable|in:not_applicable,active,review,extension_review,termination_review',
             'extension_termination_review_status' => 'nullable|in:not_needed,pending,approved',
             'due_diligence_end_date' => 'nullable|date',
+        ];
+
         if ($isRE) {
             $rules += [
                 'listing_commission_pct' => 'nullable|numeric|min:0|max:100',
