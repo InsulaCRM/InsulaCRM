@@ -74,17 +74,17 @@
                         </div>
                         <div class="col-md-4 mb-3">
                             <label class="form-label">{{ __('Buyer Legal Name') }}</label>
-                            <input name="buyer_legal_name" class="form-control" value="{{ old('buyer_legal_name', 'Robert Karanja') }}">
+                            <input name="buyer_legal_name" class="form-control" value="{{ old('buyer_legal_name') }}">
                         </div>
                         <div class="col-md-6 mb-3">
                             <label class="form-label">{{ __('Attorney-Approved Template ID') }}</label>
-                            <select name="attorney_approved_template_id" class="form-select" required>
-                                <option value="">{{ __('Select approved template') }}</option>
+                            <input name="attorney_approved_template_id" class="form-control" list="approved-template-options" value="{{ old('attorney_approved_template_id') }}" placeholder="{{ __('State-approved template ID') }}" required>
+                            <datalist id="approved-template-options">
                                 @foreach($templates as $key => $label)
-                                    <option value="{{ $key }}" @selected(old('attorney_approved_template_id') === $key)>{{ $label }}</option>
+                                    <option value="{{ $key }}">{{ $label }}</option>
                                 @endforeach
-                            </select>
-                            <div class="form-hint">{{ __('The system stores the template reference; it does not invent legal language.') }}</div>
+                            </datalist>
+                            <div class="form-hint">{{ __('Use the attorney-approved template ID for the property state. NC examples are provided; other states can use their approved template ID.') }}</div>
                         </div>
                         <div class="col-md-6 mb-3">
                             <label class="form-label">{{ __('Executed Contract Status') }}</label>
@@ -120,7 +120,7 @@
                     <div class="row">
                         <div class="col-md-4 mb-3">
                             <label class="form-label">{{ __('Earnest Money') }}</label>
-                            <input type="number" step="0.01" min="0" max="50" name="earnest_money" class="form-control" value="{{ old('earnest_money', 0) }}">
+                            <input type="number" step="0.01" min="0" name="earnest_money" class="form-control" value="{{ old('earnest_money', 0) }}">
                             <div class="form-hint">{{ __('Target range: $0–$50. Amounts above $50 require an exception.') }}</div>
                         </div>
                         <div class="col-md-4 mb-3">
@@ -151,6 +151,10 @@
                                 <option value="0">{{ __('No') }}</option>
                                 <option value="1">{{ __('Yes') }}</option>
                             </select>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label">{{ __('EMD Exception Reason') }}</label>
+                            <input name="emd_exception_reason" class="form-control" value="{{ old('emd_exception_reason') }}" placeholder="{{ __('Required when EMD exceeds $50') }}">
                         </div>
                         <div class="col-md-4 mb-3">
                             <label class="form-label">{{ __('Closing Provider Type') }}</label>
