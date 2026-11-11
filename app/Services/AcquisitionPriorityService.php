@@ -5,13 +5,6 @@ namespace App\Services;
 use App\Models\Lead;
 use App\Models\Property;
 
-/**
- * Produces a transparent acquisition-priority score for wholesale seller leads.
- *
- * This is intentionally separate from motivation_score: motivation measures
- * seller engagement/list stacking, while this score measures how attractive
- * the underlying acquisition opportunity looks from available data.
- */
 class AcquisitionPriorityService
 {
     public function score(Lead $lead): array
@@ -21,13 +14,8 @@ class AcquisitionPriorityService
         $score = 0;
         $reasons = [];
         $property = $lead->property;
-
-        // A distress signal may arrive from both provider list records and
-        // property markers. Count each signal type once so duplicated source
-        // representations do not artificially inflate acquisition priority.
         $seenSignals = [];
 
-        // Distress/list signals: strongest early acquisition indicators.
         foreach ($lead->lists as $list) {
             $signal = $this->normalizeSignal($list->type);
             if ($signal === '' || isset($seenSignals[$signal])) {
@@ -35,16 +23,12 @@ class AcquisitionPriorityService
             }
 
             $seenSignals[$signal] = true;
-            $points = $this->signalPoints($signal);
-
-            $score += $points;
+            $score += $this->signalPoints($signal);
             $reasons[] = $this->label($signal);
         }
 
         if ($property) {
-            $markers = $this->normalizedMarkers($property);
-
-            foreach ($markers as $marker) {
+            foreach ($this->normalizedMarkers($property) as $marker) {
                 if (isset($seenSignals[$marker])) {
                     continue;
                 }
@@ -54,21 +38,18 @@ class AcquisitionPriorityService
                 $reasons[] = $this->label($marker);
             }
 
-            // Condition and repair burden increase acquisition priority.
             $score += match (strtolower((string) $property->condition)) {
                 'gut_rehab', 'heavy_rehab', 'poor' => 12,
                 'moderate_rehab', 'fair' => 7,
                 'light_rehab' => 4,
                 default => 0,
-            });
+            };
 
             if ($property->repair_estimate !== null && (float) $property->repair_estimate > 0) {
                 $score += 4;
                 $reasons[] = 'Repairs identified';
             }
 
-            // Large spread between value and asking price is a useful
-            // opportunity signal, but never treated as proof of equity.
             $value = (float) ($property->estimated_value ?? 0);
             $asking = (float) ($property->asking_price ?? 0);
             if ($value > 0 && $asking > 0 && $asking < $value) {
@@ -82,15 +63,13 @@ class AcquisitionPriorityService
                 }
             }
 
-            if ($property->after_repair_value !== null && $property->maximum_allowable_offer !== null) {
-                if ((float) $property->maximum_allowable_offer > 0) {
-                    $score += 5;
-                    $reasons[] = 'Underwriting completed';
-                }
+            if ($property->after_repair_value !== null && $property->maximum_allowable_offer !== null
+                && (float) $property->maximum_allowable_offer > 0) {
+                $score += 5;
+                $reasons[] = 'Underwriting completed';
             }
         }
 
-        // Seller engagement is a tie-breaker, not the core acquisition signal.
         $score += match ($lead->temperature) {
             'hot' => 8,
             'warm' => 4,
