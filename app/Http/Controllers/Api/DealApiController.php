@@ -250,6 +250,9 @@ class DealApiController extends Controller
         }
 
         $data = $validator->validated();
+        $rematchFieldsChanged = array_intersect(array_keys($data), [
+            'property_id', 'contract_price', 'assignment_fee', 'stage',
+        ]) !== [];
 
         if (array_key_exists('property_id', $data)) {
             if ($data['property_id'] === null) {
@@ -325,6 +328,12 @@ class DealApiController extends Controller
             }
         } else {
             $deal->update($data);
+
+            // Keep disposition buyer matches synchronized when deal economics
+            // change after the deal has already entered dispositions.
+            if (!$isRE && $deal->stage === 'dispositions' && $rematchFieldsChanged) {
+                app(BuyerMatchService::class)->matchForDeal($deal->fresh(['lead.property']));
+            }
         }
 
         return response()->json(['success' => true, 'deal' => $deal->fresh()]);
