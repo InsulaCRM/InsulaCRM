@@ -60,3 +60,13 @@ The workflow calls:
 It ranks viable buyer matches using the stored buyer-specific underwriting snapshot, records a disposition-readiness activity, and returns the top buyer plus viable buyer count.
 
 This workflow prepares the disposition package; it does not represent a buyer as committed and does not automatically send buyer outreach.
+
+
+## Buyer outreach and response
+
+- `deal.disposition.ready` can trigger `NC-Wholesale-Buyer-Outreach.json`.
+- The outreach workflow uses the ranked viable buyer matches and sends through the configured `BUYER_SMS_PROVIDER_URL`.
+- Buyer sends are guarded to 8 AM–9 PM Eastern time in the workflow. Provider-level compliance settings should also be enabled.
+- `NC-Wholesale-Buyer-Response-Classifier.json` accepts inbound buyer messages, classifies common intents (interested, question, not interested, callback, opt-out), and updates the matching record.
+- `STOP`, `UNSUBSCRIBE`, `CANCEL`, `REMOVE`, and `DO NOT CONTACT` stop the matching outreach record.
+- A buyer response is never treated as a binding commitment automatically. Explicit confirmation remains required.
