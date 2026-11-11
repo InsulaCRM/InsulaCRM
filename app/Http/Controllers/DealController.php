@@ -400,6 +400,14 @@ class DealController extends Controller
 
         $deal->update($data);
 
+        // A new readiness request invalidates any prior gate result until n8n returns.
+        $deal->update([
+            'contract_gate_status' => 'pending',
+            'contract_gate_reason' => null,
+            'contract_gate_blockers' => null,
+            'contract_gate_checked_at' => null,
+        ]);
+
         $ready = $deal->executed_contract_status === 'executed'
             && $deal->contract_review_status === 'approved'
             && !empty($deal->attorney_approved_template_id)
