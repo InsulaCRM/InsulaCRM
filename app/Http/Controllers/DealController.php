@@ -257,6 +257,15 @@ class DealController extends Controller
             'stage' => 'required|in:' . implode(',', array_keys(Deal::stages())),
         ]);
 
+        if ($request->stage === 'under_contract'
+            && !\App\Services\BusinessModeService::isRealEstate()
+            && $deal->contract_gate_status !== 'approved') {
+            return response()->json([
+                'success' => false,
+                'error' => __('The wholesale Contract Protection Gate must be approved before a deal can move to Under Contract.'),
+            ], 422);
+        }
+
         $oldStage = $deal->stage;
         $updateData = [
             'stage' => $request->stage,
