@@ -49,6 +49,7 @@ class LeadIngestController extends Controller
             'utm_medium'     => 'nullable|string|max:100',
             'utm_campaign'   => 'nullable|string|max:100',
             'external_id'    => 'nullable|string|max:255',
+            'custom_fields' => 'nullable|array',
         ]);
 
         if ($validator->fails()) {
@@ -85,6 +86,7 @@ class LeadIngestController extends Controller
             'status'     => 'new',
             'temperature' => 'warm',
             'notes'      => $this->buildNotes($data),
+            'custom_fields' => $data['custom_fields'] ?? [],
         ]);
 
         // Auto-detect timezone from property zip
