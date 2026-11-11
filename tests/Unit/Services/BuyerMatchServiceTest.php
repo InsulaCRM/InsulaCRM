@@ -205,6 +205,39 @@ class BuyerMatchServiceTest extends TestCase
         $this->assertCount(0, $matches);
     }
 
+    public function test_property_rematch_removes_buyer_after_property_economics_change(): void
+    {
+        $deal = $this->setupDealWithProperty(
+            ['zip_code' => '33101', 'property_type' => 'single_family', 'state' => 'FL', 'after_repair_value' => 300000, 'repair_estimate' => 0],
+            ['contract_price' => 150000, 'stage' => 'dispositions']
+        );
+
+        $buyer = Buyer::factory()->create([
+            'tenant_id' => $this->tenant->id,
+            'preferred_zip_codes' => ['33101'],
+            'preferred_property_types' => ['single_family'],
+            'preferred_states' => ['FL'],
+            'max_purchase_price' => 200000,
+        ]);
+
+        $this->service->matchForDeal($deal);
+
+        $property = $deal->lead->property;
+        $this->assertDatabaseHas('deal_buyer_matches', [
+            'deal_id' => $deal->id,
+            'buyer_id' => $buyer->id,
+        ]);
+
+        $property->update(['after_repair_value' => 200000]);
+
+        $this->service->rematchForProperty($property->fresh());
+
+        $this->assertDatabaseMissing('deal_buyer_matches', [
+            'deal_id' => $deal->id,
+            'buyer_id' => $buyer->id,
+        ]);
+    }
+
     public function test_rematching_removes_buyer_who_no_longer_passes_underwriting(): void
     {
         $deal = $this->setupDealWithProperty(
