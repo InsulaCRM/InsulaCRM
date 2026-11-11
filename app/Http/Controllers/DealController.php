@@ -109,11 +109,18 @@ class DealController extends Controller
             return redirect()->route('deals.show', $activeDeal)->with('info', __('An active deal already exists for this lead.'));
         }
 
+        $stage = ($data['no_buyer_status'] ?? 'not_applicable') !== 'not_applicable'
+            ? 'no_buyer'
+            : (($data['executed_contract_status'] ?? 'not_executed') === 'pending_review'
+                || ($data['contract_review_status'] ?? 'pending') === 'pending'
+                ? 'contract_pending_review'
+                : 'offer_presented');
+
         $deal = Deal::create([
             'tenant_id' => auth()->user()->tenant_id,
             'lead_id' => $lead->id,
             'agent_id' => auth()->id(),
-            'stage' => 'offer_presented',
+            'stage' => $stage,
             ...$data,
         ]);
 
