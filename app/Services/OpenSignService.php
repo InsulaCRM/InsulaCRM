@@ -174,45 +174,47 @@ class OpenSignService
         $disk = Storage::disk(config('filesystems.default', 'local'));
         $directory = $requestRecord->archive_directory ?: 'deals/' . $deal->id . '/executed';
 
-        if (!empty($payload['file'])) {
+        if (empty($requestRecord->signed_pdf_path) && !empty($payload['file'])) {
             $signed = Http::timeout(60)->get($payload['file']);
 
             if ($signed->successful()) {
                 $filename = $this->safeFilename($requestRecord->title) . '-executed.pdf';
                 $path = $directory . '/' . $filename;
-                $disk->put($path, $signed->body());
+                if (!$disk->exists($path)) {
+                    $disk->put($path, $signed->body());
+                    DealDocument::withoutGlobalScopes()->create([
+                        'tenant_id' => $deal->tenant_id,
+                        'deal_id' => $deal->id,
+                        'filename' => $filename,
+                        'original_name' => $filename,
+                        'mime_type' => 'application/pdf',
+                        'size' => strlen($signed->body()),
+                        'path' => $path,
+                    ]);
+                }
                 $requestRecord->update(['signed_pdf_path' => $path]);
-
-                DealDocument::withoutGlobalScopes()->create([
-                    'tenant_id' => $deal->tenant_id,
-                    'deal_id' => $deal->id,
-                    'filename' => $filename,
-                    'original_name' => $filename,
-                    'mime_type' => 'application/pdf',
-                    'size' => strlen($signed->body()),
-                    'path' => $path,
-                ]);
             }
         }
 
-        if (!empty($payload['certificate'])) {
+        if (empty($requestRecord->certificate_path) && !empty($payload['certificate'])) {
             $certificate = Http::timeout(60)->get($payload['certificate']);
 
             if ($certificate->successful()) {
                 $filename = $this->safeFilename($requestRecord->title) . '-completion-certificate.pdf';
                 $path = $directory . '/' . $filename;
-                $disk->put($path, $certificate->body());
+                if (!$disk->exists($path)) {
+                    $disk->put($path, $certificate->body());
+                    DealDocument::withoutGlobalScopes()->create([
+                        'tenant_id' => $deal->tenant_id,
+                        'deal_id' => $deal->id,
+                        'filename' => $filename,
+                        'original_name' => $filename,
+                        'mime_type' => 'application/pdf',
+                        'size' => strlen($certificate->body()),
+                        'path' => $path,
+                    ]);
+                }
                 $requestRecord->update(['certificate_path' => $path]);
-
-                DealDocument::withoutGlobalScopes()->create([
-                    'tenant_id' => $deal->tenant_id,
-                    'deal_id' => $deal->id,
-                    'filename' => $filename,
-                    'original_name' => $filename,
-                    'mime_type' => 'application/pdf',
-                    'size' => strlen($certificate->body()),
-                    'path' => $path,
-                ]);
             }
         }
 
