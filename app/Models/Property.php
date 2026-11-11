@@ -98,6 +98,11 @@ class Property extends Model
         return $this->belongsTo(Lead::class);
     }
 
+    public function deals()
+    {
+        return $this->hasMany(Deal::class);
+    }
+
     public function tenant()
     {
         return $this->belongsTo(Tenant::class);
