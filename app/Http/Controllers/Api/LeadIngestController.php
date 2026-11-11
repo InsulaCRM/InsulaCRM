@@ -12,6 +12,7 @@ use App\Services\AiService;
 use App\Services\CustomFieldService;
 use App\Services\LeadDistributionService;
 use App\Services\MotivationScoreService;
+use App\Services\AcquisitionPriorityService;
 use App\Services\ZipTimezoneService;
 use Illuminate\Http\Request;
 use App\Notifications\LeadAssigned;
@@ -264,6 +265,13 @@ class LeadIngestController extends Controller
         $leads = $query->latest()
             ->paginate($request->integer('per_page', 25));
 
+        // Add transparent acquisition-priority intelligence without storing
+        // another mutable score on the lead record.
+        $leads->getCollection()->transform(function ($lead) {
+            $lead->acquisition_priority = app(AcquisitionPriorityService::class)->score($lead);
+            return $lead;
+        });
+
         return response()->json($leads);
     }
 
@@ -278,6 +286,8 @@ class LeadIngestController extends Controller
             ->where('tenant_id', $tenant->id)
             ->with('property')
             ->findOrFail($id);
+
+        $lead->acquisition_priority = app(AcquisitionPriorityService::class)->score($lead);
 
         return response()->json($lead);
     }
