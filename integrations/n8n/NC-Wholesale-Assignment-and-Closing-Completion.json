@@ -1,0 +1,121 @@
+{
+  "name": "NC Wholesale - Assignment and Closing Completion",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "nc-wholesale/completion",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "c1",
+      "name": "Completion Trigger",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [-700, 0],
+      "webhookId": "nc-wholesale-completion"
+    },
+    {
+      "parameters": {
+        "jsCode": "const b=$input.first().json.body?.data || $input.first().json.body || $input.first().json; const action=String(b.action||'').toLowerCase(); return [{json:{...b,action}}];"
+      },
+      "id": "c2",
+      "name": "Normalize Completion",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [-480, 0]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {"caseSensitive": true, "typeValidation": "strict"},
+          "conditions": [
+            {
+              "leftValue": "={{$json.action}}",
+              "rightValue": "assignment_complete",
+              "operator": {"type": "string", "operation": "equals"}
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "c3",
+      "name": "Assignment Completion?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [-240, 0]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{$env.INSULACRM_API_URL}}/api/v1/deals/{{$json.deal_id}}/assignment-complete",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {"name": "X-API-Key", "value": "={{$env.INSULACRM_API_KEY}}"},
+            {"name": "Content-Type", "value": "application/json"}
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{JSON.stringify({final_assignment_fee:$json.final_assignment_fee,closing_result:$json.closing_result||'assignment_completed',closing_result_notes:$json.closing_result_notes})}}",
+        "options": {"timeout": 30000}
+      },
+      "id": "c4",
+      "name": "Record Assignment Completion",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [0, -100]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{$env.INSULACRM_API_URL}}/api/v1/deals/{{$json.deal_id}}/closing-complete",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {"name": "X-API-Key", "value": "={{$env.INSULACRM_API_KEY}}"},
+            {"name": "Content-Type", "value": "application/json"}
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{JSON.stringify({final_assignment_fee:$json.final_assignment_fee,final_closing_amount:$json.final_closing_amount,closing_result:$json.closing_result||'closed_won',closing_result_notes:$json.closing_result_notes})}}",
+        "options": {"timeout": 30000}
+      },
+      "id": "c5",
+      "name": "Record Closing Completion",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [0, 100]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{JSON.stringify({success:true,message:'Wholesale completion recorded.',deal:$json})}}",
+        "options": {}
+      },
+      "id": "c6",
+      "name": "Respond Success",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [260, 0]
+    }
+  ],
+  "connections": {
+    "Completion Trigger": {"main": [[{"node":"Normalize Completion","type":"main","index":0}]]},
+    "Normalize Completion": {"main": [[{"node":"Assignment Completion?","type":"main","index":0}]]},
+    "Assignment Completion?": {
+      "main": [
+        [{"node":"Record Assignment Completion","type":"main","index":0}],
+        [{"node":"Record Closing Completion","type":"main","index":0}]
+      ]
+    },
+    "Record Assignment Completion": {"main": [[{"node":"Respond Success","type":"main","index":0}]]},
+    "Record Closing Completion": {"main": [[{"node":"Respond Success","type":"main","index":0}]]}
+  },
+  "active": false,
+  "settings": {"executionOrder":"v1"},
+  "versionId":"wholesale-completion-v1"
+}
