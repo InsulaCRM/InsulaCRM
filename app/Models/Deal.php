@@ -10,9 +10,6 @@ class Deal extends Model
 {
     use HasFactory;
 
-    /**
-     * Wholesale stages constant — kept for backward compatibility.
-     */
     public const STAGES = [
         'prospecting' => 'Prospecting',
         'contacting' => 'Contacting',
@@ -26,25 +23,16 @@ class Deal extends Model
         'closed_lost' => 'Closed Lost',
     ];
 
-    /**
-     * Get pipeline stages for the current tenant's business mode.
-     */
     public static function stages(?Tenant $tenant = null): array
     {
         return \App\Services\BusinessModeService::getStages($tenant);
     }
 
-    /**
-     * Get translated stage labels for the current tenant's business mode.
-     */
     public static function stageLabels(?Tenant $tenant = null): array
     {
         return \App\Services\BusinessModeService::getStageLabels($tenant);
     }
 
-    /**
-     * Get translated label for a single stage.
-     */
     public static function stageLabel(string $stage, ?Tenant $tenant = null): string
     {
         return \App\Services\BusinessModeService::getStageLabel($stage, $tenant);
@@ -164,6 +152,11 @@ class Deal extends Model
     public function generatedDocuments()
     {
         return $this->hasMany(GeneratedDocument::class);
+    }
+
+    public function signatureRequests()
+    {
+        return $this->hasMany(DealSignatureRequest::class);
     }
 
     public function buyerMatches()
