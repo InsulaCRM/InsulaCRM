@@ -3,7 +3,9 @@
 use App\Http\Controllers\Api\ActivityApiController;
 use App\Http\Controllers\Api\BuyerApiController;
 use App\Http\Controllers\Api\DealApiController;
+use App\Http\Controllers\Api\DealSignatureController;
 use App\Http\Controllers\Api\LeadIngestController;
+use App\Http\Controllers\Api\OpenSignWebhookController;
 use App\Http\Controllers\Api\PropertyApiController;
 use App\Http\Controllers\Api\StatsApiController;
 use Illuminate\Support\Facades\Route;
@@ -17,6 +19,11 @@ use Illuminate\Support\Facades\Route;
 | All routes prefixed with /api/v1/
 |
 */
+
+// OpenSign calls this endpoint directly. It is authenticated with the
+// OpenSign HMAC webhook signature instead of the InsulaCRM tenant API key.
+Route::post('/v1/webhooks/opensign', [OpenSignWebhookController::class, 'handle'])
+    ->middleware(['throttle:api']);
 
 Route::prefix('v1')->middleware(['api.key', 'throttle:api', 'api.log'])->group(function () {
 
@@ -37,6 +44,10 @@ Route::prefix('v1')->middleware(['api.key', 'throttle:api', 'api.log'])->group(f
     Route::get('/deals/{id}/closing-readiness', [DealApiController::class, 'closingReadiness']);
     Route::put('/deals/{id}/checklist/{itemId}', [DealApiController::class, 'markChecklistItem']);
     Route::post('/deals/{id}/advance-closing', [DealApiController::class, 'advanceClosing']);
+
+    // Deal e-signature
+    Route::get('/deals/{id}/signature-requests', [DealSignatureController::class, 'index']);
+    Route::post('/deals/{id}/signature-requests', [DealSignatureController::class, 'store']);
 
     // Buyers
     Route::get('/buyers', [BuyerApiController::class, 'index']);
