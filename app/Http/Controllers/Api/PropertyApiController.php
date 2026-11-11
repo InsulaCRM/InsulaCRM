@@ -84,6 +84,14 @@ class PropertyApiController extends Controller
             'asking_price'       => 'nullable|numeric|min:0',
             'our_offer'          => 'nullable|numeric|min:0',
             'condition'          => 'nullable|string|max:100',
+            'assignment_fee_target' => 'nullable|numeric|min:0',
+            'buyer_max_all_in_percent' => 'nullable|numeric|min:0|max:100',
+            'buyer_profit_target' => 'nullable|numeric|min:0',
+            'transaction_costs' => 'nullable|numeric|min:0',
+            'holding_costs' => 'nullable|numeric|min:0',
+            'financing_costs' => 'nullable|numeric|min:0',
+            'risk_buffer' => 'nullable|numeric|min:0',
+            'mao_strategy' => 'nullable|in:flip,rental,land,custom',
             'distress_markers'   => 'nullable|array',
             'notes'              => 'nullable|string',
             'listing_status'     => 'nullable|string|max:50',
@@ -108,9 +116,24 @@ class PropertyApiController extends Controller
                 ->findOrFail($data['lead_id']);
         }
 
-        // Compute MAO if applicable (wholesale mode only)
-        if (!\App\Services\BusinessModeService::isRealEstate($tenant) && !empty($data['after_repair_value']) && !empty($data['repair_estimate'])) {
-            $data['maximum_allowable_offer'] = ($data['after_repair_value'] * 0.70) - $data['repair_estimate'];
+        // Keep the persisted legacy MAO field aligned with the same
+        // buyer-economics engine used by the Property model. The old 70%
+        // shortcut is retained only as a benchmark, not as the decision rule.
+        if (!\App\Services\BusinessModeService::isRealEstate($tenant) && !empty($data['after_repair_value'])) {
+            $analysis = app(\App\Services\WholesaleOfferStrategyService::class)->calculate([
+                'after_repair_value' => $data['after_repair_value'],
+                'repair_estimate' => $data['repair_estimate'] ?? 0,
+                'assignment_fee' => $data['assignment_fee_target'] ?? 0,
+                'buyer_max_all_in_percent' => $data['buyer_max_all_in_percent'] ?? null,
+                'buyer_profit_target' => $data['buyer_profit_target'] ?? null,
+                'transaction_costs' => $data['transaction_costs'] ?? null,
+                'holding_costs' => $data['holding_costs'] ?? null,
+                'financing_costs' => $data['financing_costs'] ?? null,
+                'risk_buffer' => $data['risk_buffer'] ?? null,
+                'strategy' => $data['mao_strategy'] ?? 'flip',
+                'condition' => $data['condition'] ?? 'unknown',
+            ]);
+            $data['maximum_allowable_offer'] = $analysis['seller_contract_ceiling'] ?? null;
         }
 
         $property = Property::withoutGlobalScopes()->create($data);
@@ -145,6 +168,14 @@ class PropertyApiController extends Controller
             'asking_price'       => 'nullable|numeric|min:0',
             'our_offer'          => 'nullable|numeric|min:0',
             'condition'          => 'nullable|string|max:100',
+            'assignment_fee_target' => 'nullable|numeric|min:0',
+            'buyer_max_all_in_percent' => 'nullable|numeric|min:0|max:100',
+            'buyer_profit_target' => 'nullable|numeric|min:0',
+            'transaction_costs' => 'nullable|numeric|min:0',
+            'holding_costs' => 'nullable|numeric|min:0',
+            'financing_costs' => 'nullable|numeric|min:0',
+            'risk_buffer' => 'nullable|numeric|min:0',
+            'mao_strategy' => 'nullable|in:flip,rental,land,custom',
             'distress_markers'   => 'nullable|array',
             'notes'              => 'nullable|string',
             'listing_status'     => 'nullable|string|max:50',
@@ -161,8 +192,42 @@ class PropertyApiController extends Controller
         $data = $validator->validated();
         $data = AddressNormalizationService::normalizeAll($data);
 
-        if (!\App\Services\BusinessModeService::isRealEstate($tenant) && !empty($data['after_repair_value']) && !empty($data['repair_estimate'])) {
-            $data['maximum_allowable_offer'] = ($data['after_repair_value'] * 0.70) - $data['repair_estimate'];
+        if (!\App\Services\BusinessModeService::isRealEstate($tenant)) {
+            // Recalculate from the complete post-update property state so a
+            // partial update of ARV, repairs, strategy, or economics cannot
+            // leave a stale persisted MAO behind.
+            $inputs = array_merge($property->only([
+                'after_repair_value',
+                'repair_estimate',
+                'assignment_fee_target',
+                'buyer_max_all_in_percent',
+                'buyer_profit_target',
+                'transaction_costs',
+                'holding_costs',
+                'financing_costs',
+                'risk_buffer',
+                'mao_strategy',
+                'condition',
+            ]), $data);
+
+            if (!empty($inputs['after_repair_value'])) {
+                $analysis = app(\App\Services\WholesaleOfferStrategyService::class)->calculate([
+                    'after_repair_value' => $inputs['after_repair_value'],
+                    'repair_estimate' => $inputs['repair_estimate'] ?? 0,
+                    'assignment_fee' => $inputs['assignment_fee_target'] ?? 0,
+                    'buyer_max_all_in_percent' => $inputs['buyer_max_all_in_percent'] ?? null,
+                    'buyer_profit_target' => $inputs['buyer_profit_target'] ?? null,
+                    'transaction_costs' => $inputs['transaction_costs'] ?? null,
+                    'holding_costs' => $inputs['holding_costs'] ?? null,
+                    'financing_costs' => $inputs['financing_costs'] ?? null,
+                    'risk_buffer' => $inputs['risk_buffer'] ?? null,
+                    'strategy' => $inputs['mao_strategy'] ?? 'flip',
+                    'condition' => $inputs['condition'] ?? 'unknown',
+                ]);
+                $data['maximum_allowable_offer'] = $analysis['seller_contract_ceiling'] ?? null;
+            } else {
+                $data['maximum_allowable_offer'] = null;
+            }
         }
 
         $property->update($data);

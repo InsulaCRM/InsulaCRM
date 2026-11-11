@@ -1,0 +1,256 @@
+{
+  "name": "NC Wholesale - Seller Response Classifier",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "nc-wholesale/seller-response",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "c1",
+      "name": "Seller Response Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -600,
+        0
+      ],
+      "webhookId": "nc-wholesale-seller-response"
+    },
+    {
+      "parameters": {
+        "jsCode": "const p=$input.first().json.body||$input.first().json; const text=String(p.message_text||p.message||p.text||'').trim(); const hardStop=/\\b(STOP|UNSUBSCRIBE|CANCEL|END|QUIT|REMOVE|DO NOT CONTACT|DO NOT TEXT|WRONG NUMBER)\\b/i.test(text); let classification='OTHER'; let confidence=0.55; let next_action='manual_review'; let follow_up_days=null; const rules=[['PRICE_OBJECTION',/\\b(too low|price|offer|how much|would take)\\b/i,0.88,'qualify_price'],['INTERESTED',/\\b(yes|interested|sure|sounds good|call me)\\b/i,0.84,'sales_call'],['MOTIVATED',/\\b(need to sell|moving|foreclosure|divorce|inheritance|vacant|repairs)\\b/i,0.91,'qualify_motivation'],['CALLBACK',/\\b(call|talk)\\b.*\\b(later|tomorrow|morning|afternoon|evening)\\b/i,0.86,'schedule_callback'],['NOT_INTERESTED',/\\b(not interested|no thanks|leave me alone|pass)\\b/i,0.95,'stop_sequence'],['NOT_FOR_SALE',/\\b(not for sale|not selling|never selling)\\b/i,0.94,'pause_nurture'],['WRONG_CONTACT',/\\b(wrong number|wrong person|not .* owner)\\b/i,0.97,'verify_contact'],['QUESTION',/\\?|\\b(what is this|who are you|how did you get)\\b/i,0.78,'answer_question']]; for(const [label,re,conf,action] of rules){if(re.test(text)){classification=label;confidence=conf;next_action=action;break;}} if(hardStop){classification='DNC_STOP';confidence=0.99;next_action='do_not_contact';follow_up_days=null;} else if(classification==='NOT_INTERESTED'){follow_up_days=14;} else if(classification==='NOT_FOR_SALE'){follow_up_days=30;} else if(['MOTIVATED','INTERESTED','PRICE_OBJECTION','CALLBACK','QUESTION'].includes(classification)){follow_up_days=1;} return [{json:{lead_id:Number(p.lead_id||p.leadId||0),phone:String(p.phone||p.sender_phone||''),message_text:text,classification,confidence,next_action,follow_up_days,hard_stop:hardStop,received_at:p.received_at||new Date().toISOString(),source_message_id:p.source_message_id||null}}];"
+      },
+      "id": "c2",
+      "name": "Classify Seller Message",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -360,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{$env.INSULACRM_API_URL}}/api/v1/leads/{{$json.lead_id}}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-API-Key",
+              "value": "={{$env.INSULACRM_API_KEY}}"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "id": "c3",
+      "name": "Get Lead",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -120,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const c=$('Classify Seller Message').first().json; const lead=$input.first().json; const existing=lead.custom_fields||{}; const response={classification:c.classification,confidence:c.confidence,message:c.message_text,received_at:c.received_at,next_action:c.next_action,follow_up_days:c.follow_up_days,hard_stop:c.hard_stop,source_message_id:c.source_message_id}; return [{json:{...c,custom_fields:{...existing,nc_wholesale_response:response,nc_wholesale_last_inbound:c.received_at}}}];"
+      },
+      "id": "c4",
+      "name": "Build Lead Update",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        120,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "method": "PUT",
+        "url": "={{$env.INSULACRM_API_URL}}/api/v1/leads/{{$json.lead_id}}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-API-Key",
+              "value": "={{$env.INSULACRM_API_KEY}}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{JSON.stringify({do_not_contact:$json.hard_stop,custom_fields:$json.custom_fields})}}",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "id": "c5",
+      "name": "Update Lead Response State",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        360,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{$env.INSULACRM_API_URL}}/api/v1/activities",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-API-Key",
+              "value": "={{$env.INSULACRM_API_KEY}}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{JSON.stringify({lead_id:$('Classify Seller Message').first().json.lead_id,type:'sms',subject:'Inbound seller response',body:$('Classify Seller Message').first().json.message_text,logged_at:$('Classify Seller Message').first().json.received_at})}}",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "id": "c6",
+      "name": "Log Inbound SMS",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        600,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{JSON.stringify({success:true,lead_id:$('Classify Seller Message').first().json.lead_id,classification:$('Classify Seller Message').first().json.classification,hard_stop:$('Classify Seller Message').first().json.hard_stop,next_action:$('Classify Seller Message').first().json.next_action})}}",
+        "options": {}
+      },
+      "id": "c7",
+      "name": "Respond",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        840,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{$env.NC_WHOLESALE_READINESS_WEBHOOK_URL}}",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{JSON.stringify({lead_id:$('Classify Seller Message').first().json.lead_id,classification:$('Classify Seller Message').first().json.classification})}}",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "id": "c8",
+      "name": "Trigger Seller Readiness",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        480,
+        180
+      ]
+    }
+  ],
+  "connections": {
+    "Seller Response Webhook": {
+      "main": [
+        [
+          {
+            "node": "Classify Seller Message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Classify Seller Message": {
+      "main": [
+        [
+          {
+            "node": "Get Lead",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Lead": {
+      "main": [
+        [
+          {
+            "node": "Build Lead Update",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Lead Update": {
+      "main": [
+        [
+          {
+            "node": "Update Lead Response State",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update Lead Response State": {
+      "main": [
+        [
+          {
+            "node": "Trigger Seller Readiness",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Log Inbound SMS": {
+      "main": [
+        [
+          {
+            "node": "Respond",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Trigger Seller Readiness": {
+      "main": [
+        [
+          {
+            "node": "Log Inbound SMS",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "nc-wholesale-seller-response-v1",
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "tags": []
+}

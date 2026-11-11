@@ -10,9 +10,6 @@ class Deal extends Model
 {
     use HasFactory;
 
-    /**
-     * Wholesale stages constant — kept for backward compatibility.
-     */
     public const STAGES = [
         'prospecting' => 'Prospecting',
         'contacting' => 'Contacting',
@@ -26,25 +23,16 @@ class Deal extends Model
         'closed_lost' => 'Closed Lost',
     ];
 
-    /**
-     * Get pipeline stages for the current tenant's business mode.
-     */
     public static function stages(?Tenant $tenant = null): array
     {
         return \App\Services\BusinessModeService::getStages($tenant);
     }
 
-    /**
-     * Get translated stage labels for the current tenant's business mode.
-     */
     public static function stageLabels(?Tenant $tenant = null): array
     {
         return \App\Services\BusinessModeService::getStageLabels($tenant);
     }
 
-    /**
-     * Get translated label for a single stage.
-     */
     public static function stageLabel(string $stage, ?Tenant $tenant = null): string
     {
         return \App\Services\BusinessModeService::getStageLabel($stage, $tenant);
@@ -53,6 +41,33 @@ class Deal extends Model
     protected $fillable = [
         'tenant_id',
         'lead_id',
+        'property_id',
+        'property_state',
+        'property_county',
+        'buyer_type',
+        'buyer_legal_name',
+        'committed_buyer_id',
+        'buyer_committed_at',
+        'transaction_structure',
+        'attorney_approved_template_id',
+        'executed_contract_status',
+        'assignment_rights_confirmed',
+        'emd_required',
+        'emd_source',
+        'buyer_covers_emd',
+        'emd_funding_confirmed',
+        'emd_exception_reason',
+        'closing_provider_type',
+        'buyer_preferred_closing_provider',
+        'seller_preferred_closing_provider',
+        'confirmed_closing_provider',
+        'contract_review_status',
+        'no_buyer_status',
+        'extension_termination_review_status',
+        'contract_gate_status',
+        'contract_gate_reason',
+        'contract_gate_blockers',
+        'contract_gate_checked_at',
         'agent_id',
         'title',
         'stage',
@@ -64,6 +79,14 @@ class Deal extends Model
         'contract_date',
         'due_diligence_end_date',
         'closing_date',
+        'completion_status',
+        'assignment_completed_at',
+        'closed_won_at',
+        'final_assignment_fee',
+        'final_closing_amount',
+        'closing_result',
+        'closing_result_notes',
+        'completion_recorded_by',
         'listing_commission_pct',
         'buyer_commission_pct',
         'total_commission',
@@ -78,17 +101,29 @@ class Deal extends Model
     {
         return [
             'contract_price' => 'decimal:2',
+            'buyer_committed_at' => 'datetime',
             'assignment_fee' => 'decimal:2',
             'earnest_money' => 'decimal:2',
             'contract_date' => 'date',
             'due_diligence_end_date' => 'date',
             'closing_date' => 'date',
+            'assignment_completed_at' => 'datetime',
+            'closed_won_at' => 'datetime',
+            'final_assignment_fee' => 'decimal:2',
+            'final_closing_amount' => 'decimal:2',
+            'completion_recorded_by' => 'integer',
             'listing_commission_pct' => 'decimal:2',
             'buyer_commission_pct' => 'decimal:2',
             'total_commission' => 'decimal:2',
             'brokerage_split_pct' => 'decimal:2',
             'listing_date' => 'date',
             'stage_changed_at' => 'datetime',
+            'assignment_rights_confirmed' => 'boolean',
+            'emd_required' => 'boolean',
+            'buyer_covers_emd' => 'boolean',
+            'emd_funding_confirmed' => 'boolean',
+            'contract_gate_blockers' => 'array',
+            'contract_gate_checked_at' => 'datetime',
         ];
     }
 
@@ -106,6 +141,16 @@ class Deal extends Model
     public function lead()
     {
         return $this->belongsTo(Lead::class);
+    }
+
+    public function property()
+    {
+        return $this->belongsTo(Property::class);
+    }
+
+    public function committedBuyer()
+    {
+        return $this->belongsTo(Buyer::class, 'committed_buyer_id');
     }
 
     public function agent()
@@ -126,6 +171,11 @@ class Deal extends Model
     public function generatedDocuments()
     {
         return $this->hasMany(GeneratedDocument::class);
+    }
+
+    public function signatureRequests()
+    {
+        return $this->hasMany(DealSignatureRequest::class);
     }
 
     public function buyerMatches()

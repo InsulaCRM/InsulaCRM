@@ -1,0 +1,247 @@
+{
+  "name": "NC Wholesale - Buyer Response Classifier",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "nc-wholesale/buyer-response",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "r1",
+      "name": "Buyer Response Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -760,
+        0
+      ],
+      "webhookId": "nc-wholesale-buyer-response"
+    },
+    {
+      "parameters": {
+        "jsCode": "const input=$input.first().json; const b=input.body?.data||input.body||input.data||input; const text=String(b.message||b.body||b.text||'').trim(); const u=text.toUpperCase(); let intent='question'; if(/(^|\\\\b)(STOP|UNSUBSCRIBE|CANCEL|REMOVE|DO NOT CONTACT)(\\\\b|$)/.test(u)) intent='opt_out'; else if(/\\\\b(INTERESTED|YES|SEND|DETAILS|INFO|HOW MUCH|I WANT)\\\\b/.test(u)) intent='interested'; else if(/\\\\b(NO|NOPE|PASS|NOT INTERESTED|DECLINE)\\\\b/.test(u)) intent='not_interested'; else if(/\\\\b(CALL|CALL ME|LATER|TOMORROW|FOLLOW UP)\\\\b/.test(u)) intent='callback'; return [{json:{...b,response_text:text,response_intent:intent}}];"
+      },
+      "id": "r2",
+      "name": "Classify Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -500,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "method": "PUT",
+        "url": "={{$env.INSULACRM_API_URL}}/api/v1/buyers/{{$json.buyer_id}}/disposition-matches/{{$json.match_id}}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-API-Key",
+              "value": "={{$env.INSULACRM_API_KEY}}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{JSON.stringify({response_intent:$json.response_intent,response_body:$json.response_text,outreach_status:'replied',commitment_status:$json.response_intent==='interested'?'interested':($json.response_intent==='opt_out'?'declined':'none')})}}",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "id": "r3",
+      "name": "Update Buyer Match",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -240,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "leftValue": "={{$json.response_intent}}",
+              "rightValue": "opt_out",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "r4",
+      "name": "Opt Out?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        0,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{$env.INSULACRM_API_URL}}/api/v1/activities",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-API-Key",
+              "value": "={{$env.INSULACRM_API_KEY}}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{JSON.stringify({lead_id:$json.lead_id,type:'task',subject:'Buyer opted out of disposition outreach',body:'Buyer match '+$json.match_id+' returned an opt-out request. Outreach status was stopped.',logged_at:new Date().toISOString()})}}",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "id": "r5",
+      "name": "Log Opt Out",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        260,
+        -100
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{$env.INSULACRM_API_URL}}/api/v1/activities",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-API-Key",
+              "value": "={{$env.INSULACRM_API_KEY}}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{JSON.stringify({lead_id:$json.lead_id,type:'task',subject:$json.response_intent==='interested'?'Buyer interested — disposition follow-up required':'Buyer response received — review required',body:'Buyer response classified as '+$json.response_intent+'. No buyer commitment is recorded automatically.',logged_at:new Date().toISOString()})}}",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "id": "r6",
+      "name": "Log Buyer Response",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        260,
+        120
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{JSON.stringify({success:true,response_intent:$json.response_intent,commitment_status:$json.response_intent==='interested'?'interested':($json.response_intent==='opt_out'?'declined':'none'),message:'Buyer response recorded. Commitment still requires explicit confirmation.'})}}",
+        "options": {}
+      },
+      "id": "r7",
+      "name": "Respond",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        520,
+        0
+      ]
+    }
+  ],
+  "connections": {
+    "Buyer Response Webhook": {
+      "main": [
+        [
+          {
+            "node": "Classify Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Classify Response": {
+      "main": [
+        [
+          {
+            "node": "Update Buyer Match",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update Buyer Match": {
+      "main": [
+        [
+          {
+            "node": "Opt Out?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Opt Out?": {
+      "main": [
+        [
+          {
+            "node": "Log Opt Out",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Log Buyer Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Log Opt Out": {
+      "main": [
+        [
+          {
+            "node": "Respond",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Log Buyer Response": {
+      "main": [
+        [
+          {
+            "node": "Respond",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "buyer-response-v1"
+}

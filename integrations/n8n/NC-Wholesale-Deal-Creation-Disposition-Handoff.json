@@ -1,0 +1,469 @@
+{
+  "name": "NC Wholesale - Deal Creation & Disposition Handoff",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "nc-wholesale/deal-handoff",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "d1",
+      "name": "Deal Handoff Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -920,
+        0
+      ],
+      "webhookId": "nc-wholesale-deal-handoff"
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{$env.INSULACRM_API_URL}}/api/v1/leads/{{$json.body?.data?.lead_id || $json.data?.lead_id || $json.body?.lead_id || $json.lead_id}}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-API-Key",
+              "value": "={{$env.INSULACRM_API_KEY}}"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "id": "d2",
+      "name": "Get Lead",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -700,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{$env.INSULACRM_API_URL}}/api/v1/deals?per_page=100",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-API-Key",
+              "value": "={{$env.INSULACRM_API_KEY}}"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "id": "d3",
+      "name": "Get Existing Deals",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -700,
+        220
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const hook=$('Deal Handoff Webhook').first().json; const req=hook.body?.data||hook.data||hook.body||hook; const lead=$('Get Lead').first().json; const rawDeals=$('Get Existing Deals').first().json; const deals=Array.isArray(rawDeals)?rawDeals:(rawDeals.data||rawDeals.deals||[]); const cf=lead.custom_fields||{}; const readiness=cf.nc_wholesale_readiness||{}; const property=lead.property||{}; const offer=readiness.offer_inputs||{}; const leadId=Number(lead.id||req.lead_id||0); const existing=deals.find(d=>Number(d.lead_id)===leadId&&['closed_won','closed_lost','termination_review'].indexOf(d.stage)<0); const guard={dnc:Boolean(lead.do_not_contact),offer_ready:Boolean(readiness.offer_ready),hasAddress:Boolean(property.address),hasPrice:Number(offer.asking_price||0)>0,hasArv:Number(offer.arv||0)>0}; const blocked=Object.values(guard).some(v=>!v); const buyerType=String(req.buyer_type||'individual').toLowerCase(); const buyerLegalName=String(req.buyer_legal_name||lead.full_name||'').trim(); const allowedBuyerTypes=['individual','entity']; const deal={title:String(req.title||((buyerLegalName||'Buyer')+' Wholesale Deal')),stage:req.stage||'offer_presented',contract_price:Number(req.contract_price||offer.asking_price||0),assignment_fee:0,notes:'Wholesale opportunity. Contract structure must use an attorney-approved template for the applicable state.'}; return [{json:{lead_id:leadId,existing_deal_id:existing?.id||null,blocked,guard,deal,readiness,property,request:req,buyer_type:allowedBuyerTypes.includes(buyerType)?buyerType:'individual',buyer_legal_name:buyerLegalName}}];"
+      },
+      "id": "d4",
+      "name": "Validate Deal Handoff",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -420,
+        100
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{$('Validate Deal Handoff').first().json.blocked}}",
+              "operation": "false"
+            }
+          ]
+        }
+      },
+      "id": "d5",
+      "name": "Ready?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        -180,
+        100
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{$env.INSULACRM_API_URL}}/api/v1/properties",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-API-Key",
+              "value": "={{$env.INSULACRM_API_KEY}}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{JSON.stringify({lead_id:$('Validate Deal Handoff').first().json.lead_id,address:$('Validate Deal Handoff').first().json.property.address,city:$('Validate Deal Handoff').first().json.property.city,state:$('Validate Deal Handoff').first().json.property.state,zip_code:$('Validate Deal Handoff').first().json.property.zip_code,property_type:$('Validate Deal Handoff').first().json.property.property_type,estimated_value:$('Validate Deal Handoff').first().json.offer.arv,after_repair_value:$('Validate Deal Handoff').first().json.offer.arv,repair_estimate:$('Validate Deal Handoff').first().json.offer.repair_estimate,asking_price:$('Validate Deal Handoff').first().json.offer.asking_price,our_offer:$('Validate Deal Handoff').first().json.offer.mao,distress_markers:$('Validate Deal Handoff').first().json.property.distress_markers||[],condition:$('Validate Deal Handoff').first().json.property.condition,notes:'Created from wholesale offer-readiness handoff.'})}})",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "id": "d6",
+      "name": "Create Property",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        60,
+        -40
+      ]
+    },
+    {
+      "parameters": {
+        "method": "PUT",
+        "url": "={{$env.INSULACRM_API_URL}}/api/v1/leads/{{ $('Validate Deal Handoff').first().json.lead_id }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-API-Key",
+              "value": "={{$env.INSULACRM_API_KEY}}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{JSON.stringify({custom_fields:{nc_wholesale_deal:{status:'offer_presented',deal_id:$('Normalize Deal Result').first().json.deal_id,offer_ready:true,stage:$('Validate Deal Handoff').first().json.deal.stage,buyer_type:$('Validate Deal Handoff').first().json.buyer_type,buyer_legal_name:$('Validate Deal Handoff').first().json.buyer_legal_name,transaction_structure:$('Validate Deal Handoff').first().json.request.transaction_structure||'assignment',contract_review_status:$('Validate Deal Handoff').first().json.request.contract_review_status||'pending',created_at:new Date().toISOString()}}})}})",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "id": "d8",
+      "name": "Persist Deal State",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        540,
+        -40
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{$env.INSULACRM_API_URL}}/api/v1/activities",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-API-Key",
+              "value": "={{$env.INSULACRM_API_KEY}}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{JSON.stringify({lead_id:$('Validate Deal Handoff').first().json.lead_id,type:'task',subject:'Wholesale deal handoff completed',body:'Deal created/updated for offer-readiness review. Attorney-approved contract workflow remains required before execution.',logged_at:new Date().toISOString()})}}",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "id": "d9",
+      "name": "Log Deal Handoff",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        780,
+        -40
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{JSON.stringify({success:true,blocked:false,lead_id:$('Validate Deal Handoff').first().json.lead_id,deal_id:$('Normalize Deal Result').first().json.deal_id,deal_stage:$('Validate Deal Handoff').first().json.deal.stage,buyer_type:$('Validate Deal Handoff').first().json.buyer_type,buyer_legal_name:$('Validate Deal Handoff').first().json.buyer_legal_name,message:'Deal handoff created or updated. Attorney-approved contract workflow remains required before execution.'})}}",
+        "options": {}
+      },
+      "id": "d10",
+      "name": "Respond Success",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        1020,
+        -40
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{JSON.stringify({success:false,blocked:true,lead_id:$('Validate Deal Handoff').first().json.lead_id,guard:$('Validate Deal Handoff').first().json.guard,message:'Deal handoff blocked. Missing offer readiness, property/address, pricing, ARV, or DNC protection.'})}}",
+        "options": {}
+      },
+      "id": "d11",
+      "name": "Respond Blocked",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        60,
+        220
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{!!$('Validate Deal Handoff').first().json.existing_deal_id}}",
+              "operation": "true"
+            }
+          ]
+        }
+      },
+      "id": "d12",
+      "name": "Existing Deal?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        40,
+        100
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{$env.INSULACRM_API_URL}}/api/v1/deals",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-API-Key",
+              "value": "={{$env.INSULACRM_API_KEY}}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{JSON.stringify({...$('Validate Deal Handoff').first().json.deal,lead_id:$('Validate Deal Handoff').first().json.lead_id,property_state:$('Validate Deal Handoff').first().json.request.property_state||$('Validate Deal Handoff').first().json.property.state,property_county:$('Validate Deal Handoff').first().json.request.property_county||null,buyer_type:$('Validate Deal Handoff').first().json.buyer_type,buyer_legal_name:$('Validate Deal Handoff').first().json.buyer_legal_name,transaction_structure:$('Validate Deal Handoff').first().json.request.transaction_structure||'assignment',attorney_approved_template_id:$('Validate Deal Handoff').first().json.request.attorney_approved_template_id||null,executed_contract_status:$('Validate Deal Handoff').first().json.request.executed_contract_status||'not_executed',assignment_rights_confirmed:$('Validate Deal Handoff').first().json.request.assignment_rights_confirmed,earnest_money:$('Validate Deal Handoff').first().json.request.earnest_money,emd_required:$('Validate Deal Handoff').first().json.request.emd_required,emd_source:$('Validate Deal Handoff').first().json.request.emd_source,buyer_covers_emd:$('Validate Deal Handoff').first().json.request.buyer_covers_emd,emd_funding_confirmed:$('Validate Deal Handoff').first().json.request.emd_funding_confirmed,emd_exception_reason:$('Validate Deal Handoff').first().json.request.emd_exception_reason,closing_provider_type:$('Validate Deal Handoff').first().json.request.closing_provider_type,buyer_preferred_closing_provider:$('Validate Deal Handoff').first().json.request.buyer_preferred_closing_provider,seller_preferred_closing_provider:$('Validate Deal Handoff').first().json.request.seller_preferred_closing_provider,confirmed_closing_provider:$('Validate Deal Handoff').first().json.request.confirmed_closing_provider,contract_review_status:$('Validate Deal Handoff').first().json.request.contract_review_status||'pending',no_buyer_status:$('Validate Deal Handoff').first().json.request.no_buyer_status||'not_applicable',extension_termination_review_status:$('Validate Deal Handoff').first().json.request.extension_termination_review_status||'not_needed',due_diligence_end_date:$('Validate Deal Handoff').first().json.request.due_diligence_end_date||null,contract_date:$('Validate Deal Handoff').first().json.request.contract_date||null,closing_date:$('Validate Deal Handoff').first().json.request.closing_date||null})}})",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "id": "d13",
+      "name": "Create Deal",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        300,
+        60
+      ]
+    },
+    {
+      "parameters": {
+        "method": "PUT",
+        "url": "={{$env.INSULACRM_API_URL}}/api/v1/deals/{{ $('Validate Deal Handoff').first().json.existing_deal_id }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-API-Key",
+              "value": "={{$env.INSULACRM_API_KEY}}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{JSON.stringify({...$('Validate Deal Handoff').first().json.deal,property_state:$('Validate Deal Handoff').first().json.request.property_state||$('Validate Deal Handoff').first().json.property.state,property_county:$('Validate Deal Handoff').first().json.request.property_county||null,buyer_type:$('Validate Deal Handoff').first().json.buyer_type,buyer_legal_name:$('Validate Deal Handoff').first().json.buyer_legal_name,transaction_structure:$('Validate Deal Handoff').first().json.request.transaction_structure||'assignment',attorney_approved_template_id:$('Validate Deal Handoff').first().json.request.attorney_approved_template_id||null,executed_contract_status:$('Validate Deal Handoff').first().json.request.executed_contract_status||'not_executed',assignment_rights_confirmed:$('Validate Deal Handoff').first().json.request.assignment_rights_confirmed,earnest_money:$('Validate Deal Handoff').first().json.request.earnest_money,emd_required:$('Validate Deal Handoff').first().json.request.emd_required,emd_source:$('Validate Deal Handoff').first().json.request.emd_source,buyer_covers_emd:$('Validate Deal Handoff').first().json.request.buyer_covers_emd,emd_funding_confirmed:$('Validate Deal Handoff').first().json.request.emd_funding_confirmed,emd_exception_reason:$('Validate Deal Handoff').first().json.request.emd_exception_reason,closing_provider_type:$('Validate Deal Handoff').first().json.request.closing_provider_type,buyer_preferred_closing_provider:$('Validate Deal Handoff').first().json.request.buyer_preferred_closing_provider,seller_preferred_closing_provider:$('Validate Deal Handoff').first().json.request.seller_preferred_closing_provider,confirmed_closing_provider:$('Validate Deal Handoff').first().json.request.confirmed_closing_provider,contract_review_status:$('Validate Deal Handoff').first().json.request.contract_review_status||'pending',no_buyer_status:$('Validate Deal Handoff').first().json.request.no_buyer_status||'not_applicable',extension_termination_review_status:$('Validate Deal Handoff').first().json.request.extension_termination_review_status||'not_needed',due_diligence_end_date:$('Validate Deal Handoff').first().json.request.due_diligence_end_date||null,contract_date:$('Validate Deal Handoff').first().json.request.contract_date||null,closing_date:$('Validate Deal Handoff').first().json.request.closing_date||null})}})",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "id": "d14",
+      "name": "Update Existing Deal",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        300,
+        220
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const v=$input.first().json||{}; const dealId=Number(v.deal_id||v.id||v.deal?.id||0); return [{json:{...v,deal_id:dealId}}];"
+      },
+      "id": "d15",
+      "name": "Normalize Deal Result",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        540,
+        120
+      ]
+    }
+  ],
+  "connections": {
+    "Deal Handoff Webhook": {
+      "main": [
+        [
+          {
+            "node": "Get Lead",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Get Existing Deals",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Lead": {
+      "main": [
+        [
+          {
+            "node": "Validate Deal Handoff",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Existing Deals": {
+      "main": [
+        [
+          {
+            "node": "Validate Deal Handoff",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate Deal Handoff": {
+      "main": [
+        [
+          {
+            "node": "Ready?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ready?": {
+      "main": [
+        [
+          {
+            "node": "Existing Deal?",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respond Blocked",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Existing Deal?": {
+      "main": [
+        [
+          {
+            "node": "Update Existing Deal",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Create Deal",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update Existing Deal": {
+      "main": [
+        [
+          {
+            "node": "Normalize Deal Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Deal": {
+      "main": [
+        [
+          {
+            "node": "Normalize Deal Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize Deal Result": {
+      "main": [
+        [
+          {
+            "node": "Persist Deal State",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Persist Deal State": {
+      "main": [
+        [
+          {
+            "node": "Log Deal Handoff",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Log Deal Handoff": {
+      "main": [
+        [
+          {
+            "node": "Respond Success",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "saveDataErrorExecution": "all",
+    "saveDataSuccessExecution": "all"
+  },
+  "versionId": "nc-wholesale-deal-handoff-v1",
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "tags": []
+}

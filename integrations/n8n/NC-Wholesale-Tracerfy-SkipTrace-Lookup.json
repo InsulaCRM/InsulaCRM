@@ -1,0 +1,144 @@
+{
+  "name": "NC Wholesale - Tracerfy Skip Trace Lookup",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "nc-wholesale/skiptrace/lookup",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "trigger",
+      "name": "Skip Trace Request",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [0, 0],
+      "webhookId": "nc-wholesale-skiptrace-lookup"
+    },
+    {
+      "parameters": {
+        "jsCode": "const body = $json.body || $json;\nconst leadId = Number(body.lead_id || 0);\nconst address = String(body.address || body.property_address || '').trim();\nconst city = String(body.city || body.property_city || '').trim();\nconst state = String(body.state || body.property_state || 'NC').trim().toUpperCase();\nconst zip = String(body.zip || body.property_zip || '').trim();\nif (!leadId) throw new Error('lead_id is required');\nif (!address || !city || !state) throw new Error('address, city and state are required');\nreturn [{ json: { lead_id: leadId, trace_request: { address, city, state, zip, find_owner: body.find_owner !== false }, requested_at: new Date().toISOString() } }];"
+      },
+      "id": "normalize",
+      "name": "Normalize Trace Request",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [280, 0]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.TRACERFY_BASE_URL || 'https://tracerfy.com/v1/api' }}/trace/lookup/",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.TRACERFY_API_KEY }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json.trace_request) }}",
+        "options": {
+          "timeout": 60000,
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "id": "tracerfy",
+      "name": "Tracerfy Instant Lookup",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [560, 0]
+    },
+    {
+      "parameters": {
+        "jsCode": "const trace = $json;\nconst persons = Array.isArray(trace.persons) ? trace.persons : [];\nconst person = persons[0] || {};\nconst phones = Array.isArray(person.phones) ? person.phones : [];\nconst emails = Array.isArray(person.emails) ? person.emails : [];\nconst primaryPhone = phones.find(p => !p.dnc && !p.litigator) || phones[0] || null;\nconst blockedPhone = phones.some(p => Boolean(p.dnc || p.litigator || p.tcpa));\nreturn [{ json: { trace, lead_id: $('Normalize Trace Request').first().json.lead_id, hit: Boolean(trace.hit), owner: { first_name: person.first_name || null, last_name: person.last_name || null }, primary_phone: primaryPhone?.number || null, primary_phone_flags: primaryPhone ? { dnc: Boolean(primaryPhone.dnc), litigator: Boolean(primaryPhone.litigator), tcpa: Boolean(primaryPhone.tcpa), type: primaryPhone.type || null, carrier: primaryPhone.carrier || null } : null, primary_email: emails[0]?.email || null, do_not_contact: blockedPhone, phones_found: phones.length, emails_found: emails.length, credits_deducted: trace.credits_deducted || 0, trace_request_id: trace.meta?.request_id || null } }];"
+      },
+      "id": "normalize-result",
+      "name": "Normalize Trace Result",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [840, 0]
+    },
+    {
+      "parameters": {
+        "method": "PUT",
+        "url": "={{ $env.INSULA_BASE_URL }}/api/v1/leads/{{ $json.lead_id }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-API-Key",
+              "value": "={{ $env.INSULA_API_KEY }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify(Object.fromEntries(Object.entries({ phone: $json.primary_phone, email: $json.primary_email, do_not_contact: $json.do_not_contact }).filter(([, value]) => value !== null && value !== undefined))) }}",
+        "options": {
+          "timeout": 30000,
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "id": "insula",
+      "name": "Update InsulaCRM Contact",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1120, 0]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ success: true, skip_trace: $('Normalize Trace Result').first().json, crm_update: $json }) }}",
+        "options": {}
+      },
+      "id": "response",
+      "name": "Return Skip Trace Result",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [1400, 0]
+    }
+  ],
+  "connections": {
+    "Skip Trace Request": {
+      "main": [[{"node": "Normalize Trace Request", "type": "main", "index": 0}]]
+    },
+    "Normalize Trace Request": {
+      "main": [[{"node": "Tracerfy Instant Lookup", "type": "main", "index": 0}]]
+    },
+    "Tracerfy Instant Lookup": {
+      "main": [[{"node": "Normalize Trace Result", "type": "main", "index": 0}]]
+    },
+    "Normalize Trace Result": {
+      "main": [[{"node": "Update InsulaCRM Contact", "type": "main", "index": 0}]]
+    },
+    "Update InsulaCRM Contact": {
+      "main": [[{"node": "Return Skip Trace Result", "type": "main", "index": 0}]]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "saveDataErrorExecution": "all",
+    "saveDataSuccessExecution": "all"
+  },
+  "active": false
+}

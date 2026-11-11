@@ -15,8 +15,8 @@ class BuyerMatchServiceTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->service = new BuyerMatchService();
         $this->actingAsAdmin();
+        $this->service = app(BuyerMatchService::class);
     }
 
     private function setupDealWithProperty(array $propertyAttrs, array $dealAttrs = []): \App\Models\Deal
@@ -29,8 +29,8 @@ class BuyerMatchServiceTest extends TestCase
     public function test_matches_buyer_by_zip_code(): void
     {
         $deal = $this->setupDealWithProperty(
-            ['zip_code' => '33101', 'property_type' => 'commercial', 'state' => 'XX'],
-            ['contract_price' => 999999]
+            ['zip_code' => '33101', 'property_type' => 'commercial', 'state' => 'XX', 'after_repair_value' => 300000, 'repair_estimate' => 0],
+            ['contract_price' => 50000]
         );
 
         Buyer::factory()->create([
@@ -44,14 +44,14 @@ class BuyerMatchServiceTest extends TestCase
         $matches = $this->service->matchForDeal($deal);
 
         $this->assertCount(1, $matches);
-        $this->assertEquals(30, $matches->first()['score']);
+        $this->assertEquals(45, $matches->first()['score']);
     }
 
     public function test_matches_buyer_by_property_type(): void
     {
         $deal = $this->setupDealWithProperty(
-            ['property_type' => 'single_family', 'zip_code' => '00000', 'state' => 'XX'],
-            ['contract_price' => 999999]
+            ['property_type' => 'single_family', 'zip_code' => '00000', 'state' => 'XX', 'after_repair_value' => 300000, 'repair_estimate' => 0],
+            ['contract_price' => 50000]
         );
 
         Buyer::factory()->create([
@@ -65,13 +65,13 @@ class BuyerMatchServiceTest extends TestCase
         $matches = $this->service->matchForDeal($deal);
 
         $this->assertCount(1, $matches);
-        $this->assertEquals(25, $matches->first()['score']);
+        $this->assertEquals(40, $matches->first()['score']);
     }
 
     public function test_matches_buyer_by_price(): void
     {
         $deal = $this->setupDealWithProperty(
-            ['zip_code' => '00000', 'property_type' => 'land', 'state' => 'XX'],
+            ['zip_code' => '00000', 'property_type' => 'land', 'state' => 'XX', 'after_repair_value' => 300000, 'repair_estimate' => 0],
             ['contract_price' => 150000]
         );
 
@@ -89,10 +89,10 @@ class BuyerMatchServiceTest extends TestCase
         $this->assertEquals(20, $matches->first()['score']);
     }
 
-    public function test_perfect_match_scores_ninety(): void
+    public function test_perfect_match_scores_eighty(): void
     {
         $deal = $this->setupDealWithProperty(
-            ['zip_code' => '33101', 'property_type' => 'single_family', 'state' => 'FL'],
+            ['zip_code' => '33101', 'property_type' => 'single_family', 'state' => 'FL', 'after_repair_value' => 300000, 'repair_estimate' => 0],
             ['contract_price' => 150000]
         );
 
@@ -107,14 +107,14 @@ class BuyerMatchServiceTest extends TestCase
         $matches = $this->service->matchForDeal($deal);
 
         $this->assertCount(1, $matches);
-        $this->assertEquals(90, $matches->first()['score']);
+        $this->assertEquals(80, $matches->first()['score']);
     }
 
     public function test_no_match_excluded_from_results(): void
     {
         $deal = $this->setupDealWithProperty(
-            ['zip_code' => '00000', 'property_type' => 'land', 'state' => 'XX'],
-            ['contract_price' => 999999]
+            ['zip_code' => '00000', 'property_type' => 'land', 'state' => 'XX', 'after_repair_value' => 300000, 'repair_estimate' => 0],
+            ['contract_price' => 250000]
         );
 
         Buyer::factory()->create([
@@ -132,7 +132,7 @@ class BuyerMatchServiceTest extends TestCase
     public function test_matches_persisted_to_database(): void
     {
         $deal = $this->setupDealWithProperty(
-            ['zip_code' => '33101', 'property_type' => 'single_family', 'state' => 'FL'],
+            ['zip_code' => '33101', 'property_type' => 'single_family', 'state' => 'FL', 'after_repair_value' => 300000, 'repair_estimate' => 0],
             ['contract_price' => 150000]
         );
 
@@ -149,14 +149,14 @@ class BuyerMatchServiceTest extends TestCase
         $this->assertDatabaseHas('deal_buyer_matches', [
             'deal_id' => $deal->id,
             'buyer_id' => $buyer->id,
-            'match_score' => 90,
+            'match_score' => 80,
         ]);
     }
 
     public function test_results_sorted_by_score_descending(): void
     {
         $deal = $this->setupDealWithProperty(
-            ['zip_code' => '33101', 'property_type' => 'single_family', 'state' => 'FL'],
+            ['zip_code' => '33101', 'property_type' => 'single_family', 'state' => 'FL', 'after_repair_value' => 300000, 'repair_estimate' => 0],
             ['contract_price' => 150000]
         );
 
@@ -173,7 +173,7 @@ class BuyerMatchServiceTest extends TestCase
             'preferred_zip_codes' => ['33101'],
             'preferred_property_types' => ['commercial'],
             'preferred_states' => ['TX'],
-            'max_purchase_price' => 100000,
+            'max_purchase_price' => 200000,
         ]);
 
         $matches = $this->service->matchForDeal($deal);
@@ -189,7 +189,7 @@ class BuyerMatchServiceTest extends TestCase
         ]);
 
         $deal = $this->setupDealWithProperty(
-            ['zip_code' => '33101', 'property_type' => 'single_family', 'state' => 'FL'],
+            ['zip_code' => '33101', 'property_type' => 'single_family', 'state' => 'FL', 'after_repair_value' => 300000, 'repair_estimate' => 0],
             ['contract_price' => 150000]
         );
 

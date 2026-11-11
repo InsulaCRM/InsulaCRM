@@ -16,12 +16,194 @@ use App\Models\User;
 use App\Notifications\BuyerMatchFound;
 use App\Notifications\DealStageChanged as DealStageChangedNotification;
 use App\Services\BuyerScoreService;
+use App\Services\OpenSignService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Storage;
 
 class DealController extends Controller
 {
+    public function intake(Request $request, ?\App\Models\Lead $lead = null)
+    {
+        $this->authorize('create', Deal::class);
+
+        $leads = $lead ? collect([$lead]) : \App\Models\Lead::with('property')
+            ->where('tenant_id', auth()->user()->tenant_id)
+            ->whereNotIn('status', ['dead'])
+            ->latest()
+            ->limit(250)
+            ->get();
+
+        $states = collect([
+            'AL'=>'Alabama','AK'=>'Alaska','AZ'=>'Arizona','AR'=>'Arkansas','CA'=>'California','CO'=>'Colorado','CT'=>'Connecticut','DE'=>'Delaware','FL'=>'Florida','GA'=>'Georgia','HI'=>'Hawaii','ID'=>'Idaho','IL'=>'Illinois','IN'=>'Indiana','IA'=>'Iowa','KS'=>'Kansas','KY'=>'Kentucky','LA'=>'Louisiana','ME'=>'Maine','MD'=>'Maryland','MA'=>'Massachusetts','MI'=>'Michigan','MN'=>'Minnesota','MS'=>'Mississippi','MO'=>'Missouri','MT'=>'Montana','NE'=>'Nebraska','NV'=>'Nevada','NH'=>'New Hampshire','NJ'=>'New Jersey','NM'=>'New Mexico','NY'=>'New York','NC'=>'North Carolina','ND'=>'North Dakota','OH'=>'Ohio','OK'=>'Oklahoma','OR'=>'Oregon','PA'=>'Pennsylvania','RI'=>'Rhode Island','SC'=>'South Carolina','SD'=>'South Dakota','TN'=>'Tennessee','TX'=>'Texas','UT'=>'Utah','VT'=>'Vermont','VA'=>'Virginia','WA'=>'Washington','WV'=>'West Virginia','WI'=>'Wisconsin','WY'=>'Wyoming',
+        ]);
+
+        $structures = ['assignment' => __('Assignment'), 'double_close' => __('Double Close'), 'novation' => __('Novation')];
+        $templates = [
+            'NC-PURCHASE-v1-ATTORNEY-APPROVED' => __('NC Purchase & Sale'),
+            'NC-ASSIGNMENT-v1-ATTORNEY-APPROVED' => __('NC Assignment'),
+            'NC-DOUBLE-CLOSE-v1-ATTORNEY-APPROVED' => __('NC Double Close'),
+            'NC-NOVATION-v1-ATTORNEY-APPROVED' => __('NC Novation'),
+        ];
+        $closingTypes = [
+            'closing_attorney' => __('Closing Attorney'),
+            'title_company' => __('Title Company'),
+            'escrow_company' => __('Escrow Company'),
+            'settlement_company' => __('Settlement Company'),
+            'other_permitted' => __('Other Permitted'),
+        ];
+
+        return view('deals.intake', compact('lead', 'leads', 'states', 'structures', 'templates', 'closingTypes'));
+    }
+
+    public function storeIntake(Request $request)
+    {
+        $this->authorize('create', Deal::class);
+
+        $data = $request->validate([
+            'lead_id' => 'required|exists:leads,id',
+            'title' => 'required|string|max:255',
+            'property_state' => 'required|string|size:2',
+            'property_county' => 'nullable|string|max:255',
+            'contract_price' => 'nullable|numeric|min:0',
+            'buyer_type' => 'required|in:individual,entity',
+            'buyer_legal_name' => 'nullable|string|max:255',
+            'transaction_structure' => 'required|in:assignment,double_close,novation',
+            'attorney_approved_template_id' => 'required|string|max:255',
+            'executed_contract_status' => 'required|in:not_executed,pending_review,executed',
+            'assignment_rights_confirmed' => 'nullable|boolean',
+            'earnest_money' => 'nullable|numeric|min:0',
+            'emd_required' => 'nullable|boolean',
+            'emd_source' => 'nullable|in:wholesaler,end_buyer,other_approved',
+            'buyer_covers_emd' => 'nullable|boolean',
+            'emd_funding_confirmed' => 'nullable|boolean',
+            'emd_exception_reason' => 'nullable|string|max:500',
+            'closing_provider_type' => 'nullable|in:closing_attorney,title_company,escrow_company,settlement_company,other_permitted',
+            'buyer_preferred_closing_provider' => 'nullable|string|max:255',
+            'seller_preferred_closing_provider' => 'nullable|string|max:255',
+            'confirmed_closing_provider' => 'nullable|string|max:255',
+            'contract_review_status' => 'nullable|in:pending,approved,needs_attention',
+            'no_buyer_status' => 'nullable|in:not_applicable,active,review,extension_review,termination_review',
+            'extension_termination_review_status' => 'nullable|in:not_needed,pending,approved',
+            'contract_date' => 'nullable|date',
+            'due_diligence_end_date' => 'nullable|date',
+            'closing_date' => 'nullable|date',
+        ]);
+
+        if (($data['earnest_money'] ?? 0) > 50 && empty($data['emd_exception_reason'])) {
+            return back()->withInput()->withErrors(['earnest_money' => __('EMD above $50 requires an exception reason.')]);
+        }
+
+        if (($data['transaction_structure'] ?? null) === 'assignment' && ($data['assignment_rights_confirmed'] ?? null) !== true) {
+            return back()->withInput()->withErrors(['assignment_rights_confirmed' => __('Assignment requires confirmed assignment rights before contract handoff.')]);
+        }
+
+        $lead = \App\Models\Lead::findOrFail($data['lead_id']);
+        if ($lead->tenant_id !== auth()->user()->tenant_id) {
+            abort(403);
+        }
+
+        $activeDeal = Deal::where('lead_id', $lead->id)
+            ->whereNotIn('stage', ['closed_won', 'closed_lost', 'termination_review'])
+            ->first();
+        if ($activeDeal) {
+            return redirect()->route('deals.show', $activeDeal)->with('info', __('An active deal already exists for this lead.'));
+        }
+
+        $stage = ($data['no_buyer_status'] ?? 'not_applicable') !== 'not_applicable'
+            ? 'no_buyer'
+            : (($data['executed_contract_status'] ?? 'not_executed') === 'pending_review'
+                || ($data['contract_review_status'] ?? 'pending') === 'pending'
+                ? 'contract_pending_review'
+                : 'offer_presented');
+
+        $deal = Deal::create([
+            'tenant_id' => auth()->user()->tenant_id,
+            'lead_id' => $lead->id,
+            'agent_id' => auth()->id(),
+            'stage' => $stage,
+            ...$data,
+        ]);
+
+        \App\Models\Activity::create([
+            'tenant_id' => auth()->user()->tenant_id,
+            'lead_id' => $lead->id,
+            'deal_id' => $deal->id,
+            'agent_id' => auth()->id(),
+            'type' => 'note',
+            'subject' => __('Deal / contract intake completed'),
+            'body' => __('Structure: :structure; template: :template; closing: :closing', [
+                'structure' => $data['transaction_structure'],
+                'template' => $data['attorney_approved_template_id'],
+                'closing' => $data['closing_provider_type'] ?? 'not selected',
+            ]),
+            'logged_at' => now(),
+        ]);
+
+        \App\Services\WebhookService::dispatch('deal.intake.created', [
+            'deal_id' => $deal->id,
+            'lead_id' => $deal->lead_id,
+            'stage' => $deal->stage,
+            'property_state' => $deal->property_state,
+            'property_county' => $deal->property_county,
+            'buyer_type' => $deal->buyer_type,
+            'buyer_legal_name' => $deal->buyer_legal_name,
+            'transaction_structure' => $deal->transaction_structure,
+            'attorney_approved_template_id' => $deal->attorney_approved_template_id,
+            'executed_contract_status' => $deal->executed_contract_status,
+            'assignment_rights_confirmed' => $deal->assignment_rights_confirmed,
+            'earnest_money' => $deal->earnest_money,
+            'emd_required' => $deal->emd_required,
+            'emd_source' => $deal->emd_source,
+            'buyer_covers_emd' => $deal->buyer_covers_emd,
+            'emd_funding_confirmed' => $deal->emd_funding_confirmed,
+            'emd_exception_reason' => $deal->emd_exception_reason,
+            'closing_provider_type' => $deal->closing_provider_type,
+            'buyer_preferred_closing_provider' => $deal->buyer_preferred_closing_provider,
+            'seller_preferred_closing_provider' => $deal->seller_preferred_closing_provider,
+            'confirmed_closing_provider' => $deal->confirmed_closing_provider,
+            'contract_review_status' => $deal->contract_review_status,
+            'no_buyer_status' => $deal->no_buyer_status,
+            'extension_termination_review_status' => $deal->extension_termination_review_status,
+            'contract_price' => $deal->contract_price,
+            'contract_date' => $deal->contract_date?->toDateString(),
+            'due_diligence_end_date' => $deal->due_diligence_end_date?->toDateString(),
+            'closing_date' => $deal->closing_date?->toDateString(),
+        ], auth()->user()->tenant_id);
+
+        if (
+            $deal->executed_contract_status === 'executed'
+            && $deal->contract_review_status === 'approved'
+            && $deal->due_diligence_end_date
+            && $deal->closing_date
+        ) {
+            \App\Services\WebhookService::dispatch('deal.contract.ready', [
+                'deal_id' => $deal->id,
+                'lead_id' => $deal->lead_id,
+                'transaction_structure' => $deal->transaction_structure,
+                'attorney_approved_template_id' => $deal->attorney_approved_template_id,
+                'executed_contract' => true,
+                'assignment_rights_confirmed' => $deal->assignment_rights_confirmed,
+                'emd_amount' => $deal->earnest_money,
+                'emd_required' => $deal->emd_required,
+                'emd_source' => $deal->emd_source,
+                'buyer_covers_emd_confirmed' => $deal->buyer_covers_emd,
+                'emd_funding_confirmed' => $deal->emd_funding_confirmed,
+                'emd_exception_reason' => $deal->emd_exception_reason,
+                'closing_provider_type' => $deal->closing_provider_type,
+                'closing_provider_confirmed' => !empty($deal->confirmed_closing_provider),
+                'confirmed_closing_provider' => $deal->confirmed_closing_provider,
+                'buyer_preferred_closing_provider' => $deal->buyer_preferred_closing_provider,
+                'seller_preferred_closing_provider' => $deal->seller_preferred_closing_provider,
+                'due_diligence_end_date' => $deal->due_diligence_end_date?->toDateString(),
+                'closing_date' => $deal->closing_date?->toDateString(),
+                'contract_date' => $deal->contract_date?->toDateString(),
+            ], auth()->user()->tenant_id);
+        }
+
+        return redirect()->route('deals.show', $deal)->with('success', __('Deal intake saved. Contract gate remains required before Under Contract.'));
+    }
+
     public function pipeline(Request $request)
     {
         $this->authorize('viewAny', Deal::class);
@@ -75,6 +257,15 @@ class DealController extends Controller
         $request->validate([
             'stage' => 'required|in:' . implode(',', array_keys(Deal::stages())),
         ]);
+
+        if ($request->stage === 'under_contract'
+            && !\App\Services\BusinessModeService::isRealEstate()
+            && $deal->contract_gate_status !== 'approved') {
+            return response()->json([
+                'success' => false,
+                'error' => __('The wholesale Contract Protection Gate must be approved before a deal can move to Under Contract.'),
+            ], 422);
+        }
 
         $oldStage = $deal->stage;
         $updateData = [
@@ -173,10 +364,116 @@ class DealController extends Controller
         return response()->json(['success' => true]);
     }
 
+
+    public function contractReview(Request $request, Deal $deal)
+    {
+        $this->authorize('update', $deal);
+
+        $data = $request->validate([
+            'property_state' => 'required|string|size:2',
+            'property_county' => 'nullable|string|max:255',
+            'buyer_type' => 'required|in:individual,entity',
+            'buyer_legal_name' => 'nullable|string|max:255',
+            'transaction_structure' => 'required|in:assignment,double_close,novation',
+            'attorney_approved_template_id' => 'required|string|max:255',
+            'executed_contract_status' => 'required|in:not_executed,pending_review,executed',
+            'assignment_rights_confirmed' => 'nullable|boolean',
+            'earnest_money' => 'nullable|numeric|min:0',
+            'emd_required' => 'nullable|boolean',
+            'emd_source' => 'nullable|in:wholesaler,end_buyer,other_approved',
+            'buyer_covers_emd' => 'nullable|boolean',
+            'emd_funding_confirmed' => 'nullable|boolean',
+            'emd_exception_reason' => 'nullable|string|max:500',
+            'closing_provider_type' => 'nullable|in:closing_attorney,title_company,escrow_company,settlement_company,other_permitted',
+            'buyer_preferred_closing_provider' => 'nullable|string|max:255',
+            'seller_preferred_closing_provider' => 'nullable|string|max:255',
+            'confirmed_closing_provider' => 'nullable|string|max:255',
+            'contract_review_status' => 'required|in:pending,approved,needs_attention',
+            'no_buyer_status' => 'required|in:not_applicable,active,review,extension_review,termination_review',
+            'extension_termination_review_status' => 'required|in:not_needed,pending,approved',
+            'contract_date' => 'nullable|date',
+            'due_diligence_end_date' => 'nullable|date',
+            'closing_date' => 'nullable|date',
+        ]);
+
+        if (($data['earnest_money'] ?? 0) > 50 && empty($data['emd_exception_reason'])) {
+            return back()->withInput()->withErrors(['earnest_money' => __('EMD above $50 requires an exception reason.')]);
+        }
+
+        if (($data['transaction_structure'] ?? null) === 'assignment' && ($data['assignment_rights_confirmed'] ?? false) !== true) {
+            return back()->withInput()->withErrors(['assignment_rights_confirmed' => __('Assignment requires confirmed assignment rights before contract handoff.')]);
+        }
+
+        if (($data['buyer_covers_emd'] ?? false) && !($data['emd_funding_confirmed'] ?? false)) {
+            return back()->withInput()->withErrors(['emd_funding_confirmed' => __('Buyer-funded EMD must be confirmed before contract handoff.')]);
+        }
+
+        $deal->update($data);
+
+        // A new readiness request invalidates any prior gate result until n8n returns.
+        $deal->update([
+            'contract_gate_status' => 'pending',
+            'contract_gate_reason' => null,
+            'contract_gate_blockers' => null,
+            'contract_gate_checked_at' => null,
+        ]);
+
+        $ready = $deal->executed_contract_status === 'executed'
+            && $deal->contract_review_status === 'approved'
+            && !empty($deal->attorney_approved_template_id)
+            && !empty($deal->due_diligence_end_date)
+            && !empty($deal->closing_date)
+            && !empty($deal->closing_provider_type)
+            && !empty($deal->confirmed_closing_provider)
+            && (($deal->transaction_structure !== 'assignment') || $deal->assignment_rights_confirmed);
+
+        if ($ready) {
+            \App\Services\WebhookService::dispatch('deal.contract.ready', [
+                'deal_id' => $deal->id,
+                'lead_id' => $deal->lead_id,
+                'transaction_structure' => $deal->transaction_structure,
+                'attorney_approved_template_id' => $deal->attorney_approved_template_id,
+                'executed_contract' => true,
+                'assignment_rights_confirmed' => $deal->assignment_rights_confirmed,
+                'emd_amount' => $deal->earnest_money,
+                'emd_required' => $deal->emd_required,
+                'emd_source' => $deal->emd_source,
+                'buyer_covers_emd_confirmed' => $deal->buyer_covers_emd,
+                'emd_funding_confirmed' => $deal->emd_funding_confirmed,
+                'emd_exception_reason' => $deal->emd_exception_reason,
+                'closing_provider_type' => $deal->closing_provider_type,
+                'closing_provider_confirmed' => true,
+                'confirmed_closing_provider' => $deal->confirmed_closing_provider,
+                'buyer_preferred_closing_provider' => $deal->buyer_preferred_closing_provider,
+                'seller_preferred_closing_provider' => $deal->seller_preferred_closing_provider,
+                'due_diligence_end_date' => $deal->due_diligence_end_date?->toDateString(),
+                'closing_date' => $deal->closing_date?->toDateString(),
+                'contract_date' => $deal->contract_date?->toDateString(),
+            ], auth()->user()->tenant_id);
+
+            AuditLog::log('deal.contract_gate.requested', $deal);
+            Activity::create([
+                'tenant_id' => $deal->tenant_id,
+                'lead_id' => $deal->lead_id,
+                'deal_id' => $deal->id,
+                'agent_id' => auth()->id(),
+                'type' => 'note',
+                'subject' => __('Contract protection gate requested'),
+                'body' => __('Deal passed the local readiness checks and was sent to the configured contract protection workflow.'),
+                'logged_at' => now(),
+            ]);
+
+            return redirect()->back()->with('success', __('Contract readiness saved and protection gate requested.'));
+        }
+
+        return redirect()->back()->with('warning', __('Contract details saved, but the protection gate is not ready to run. Review the highlighted requirements.'));
+    }
+
+
     public function show(Deal $deal)
     {
         $this->authorize('view', $deal);
-        $deal->load(['lead.property', 'agent', 'documents', 'buyerMatches.buyer', 'activities.agent']);
+        $deal->load(['lead.property', 'agent', 'documents', 'generatedDocuments', 'signatureRequests', 'buyerMatches.buyer', 'activities.agent']);
 
         if (\App\Services\BusinessModeService::isRealEstate()) {
             $deal->load(['offers', 'checklistItems']);
@@ -203,6 +500,71 @@ class DealController extends Controller
         }
 
         return response()->json(['success' => true, 'deal' => $deal->fresh()]);
+    }
+
+    public function sendOpenSign(Request $request, Deal $deal, OpenSignService $service)
+    {
+        $this->authorize('update', $deal);
+
+        if (!\App\Services\BusinessModeService::isWholesale()) {
+            return back()->withErrors(['signature' => __('OpenSign contract sending is currently enabled for wholesale deals.')]);
+        }
+
+        if ($deal->contract_gate_status !== 'approved') {
+            return back()->withErrors(['signature' => __('The Contract Protection Gate must be approved before sending a document for signature.')]);
+        }
+
+        $data = $request->validate([
+            'generated_document_id' => 'required|integer',
+            'include_seller' => 'nullable|boolean',
+            'include_buyer' => 'nullable|boolean',
+            'opensign_template_id' => 'nullable|string|max:255',
+        ]);
+
+        $document = $deal->generatedDocuments()->findOrFail($data['generated_document_id']);
+        $signers = [];
+
+        if (($data['include_seller'] ?? false) && $deal->lead?->email) {
+            $signers[] = [
+                'role' => 'seller',
+                'name' => $deal->lead->full_name,
+                'email' => $deal->lead->email,
+                'phone' => $deal->lead->phone,
+            ];
+        }
+
+        if (($data['include_buyer'] ?? false) && $deal->committedBuyer?->email) {
+            $signers[] = [
+                'role' => 'buyer',
+                'name' => $deal->committedBuyer->full_name,
+                'email' => $deal->committedBuyer->email,
+                'phone' => $deal->committedBuyer->phone,
+            ];
+        }
+
+        if (count($signers) === 0) {
+            return back()->withErrors(['signature' => __('Select at least one signer with a valid email address.')]);
+        }
+
+        try {
+            $service->createSignatureRequest(
+                $deal,
+                $document,
+                $signers,
+                [],
+                [
+                    'title' => $document->name,
+                    'document_type' => 'wholesale_contract',
+                    'enable_otp' => true,
+                    'send_in_order' => count($signers) > 1,
+                    'opensign_template_id' => $data['opensign_template_id'] ?? null,
+                ]
+            );
+        } catch (\RuntimeException $e) {
+            return back()->withErrors(['signature' => $e->getMessage()]);
+        }
+
+        return back()->with('success', __('Signature request sent through OpenSign.'));
     }
 
     public function uploadDocument(Request $request, Deal $deal)

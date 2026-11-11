@@ -1,0 +1,391 @@
+{
+  "name": "NC Wholesale - Seller Follow-Up Engine",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "nc-wholesale/seller-follow-up",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "f1",
+      "name": "Follow-Up Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -600,
+        0
+      ],
+      "webhookId": "nc-wholesale-seller-follow-up"
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{$env.INSULACRM_API_URL}}/api/v1/leads/{{$json.body.lead_id||$json.lead_id}}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-API-Key",
+              "value": "={{$env.INSULACRM_API_KEY}}"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "id": "f2",
+      "name": "Load Lead",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -360,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const lead=$input.first().json; const req=$('Follow-Up Webhook').first().json.body||$('Follow-Up Webhook').first().json; const r=(lead.custom_fields||{}).nc_wholesale_response||{}; const blocked=!!lead.do_not_contact||r.hard_stop===true; const phone=String(lead.phone||req.phone||'').trim(); const eligible=!!phone&&!blocked; const days=Number(req.follow_up_days||r.follow_up_days||7); let message=''; let action='hold'; if(eligible){if(r.classification==='PRICE_OBJECTION'){message=`Hi ${lead.first_name||''}, just following up on the property. If price is the main concern, what price would make sense for you?`;action='send';}else if(['INTERESTED','MOTIVATED'].includes(r.classification)){message=`Hi ${lead.first_name||''}, wanted to follow up about the property. Are you still open to discussing a sale?`;action='send';}else if(r.classification==='CALLBACK'){message=`Hi ${lead.first_name||''}, following up like we discussed. Is now a good time to talk?`;action='send';}else if(r.classification==='QUESTION'){message=`Hi ${lead.first_name||''}, just following up on your question. I’m happy to give you the details and see if selling makes sense for you.`;action='send';}else if(!['NOT_INTERESTED','NOT_FOR_SALE'].includes(r.classification)){message=`Hi ${lead.first_name||''}, just checking back in about the property. Are you still open to a quick conversation?`;action='send';}} const next=action==='send'?new Date(Date.now()+days*86400000).toISOString():null; return [{json:{lead_id:lead.id,first_name:lead.first_name||'',phone,classification:r.classification||'OTHER',eligible,blocked,action,message,next_follow_up_at:next,reason:blocked?'dnc_or_hard_stop':(!phone?'missing_phone':action)}}];"
+      },
+      "id": "f3",
+      "name": "Build Follow-Up",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -120,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "version": 2,
+            "typeValidation": "strict",
+            "caseSensitive": true
+          },
+          "conditions": [
+            {
+              "id": "eligible",
+              "leftValue": "={{$json.eligible && $('Run Seller Contact Gate').first().json.allowed_to_contact}}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "f4",
+      "name": "Eligible To Send?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        120,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{$env.NC_WHOLESALE_CONTACT_GATE_WEBHOOK_URL}}",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{JSON.stringify({phone:$json.phone,do_not_contact:$json.blocked,status:'',timezone:$json.timezone||'America/New_York'})}}",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "id": "f4g",
+      "name": "Run Seller Contact Gate",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        120,
+        180
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "version": 2,
+            "typeValidation": "strict",
+            "caseSensitive": true
+          },
+          "conditions": [
+            {
+              "id": "provider",
+              "leftValue": "={{$env.SELLER_SMS_WEBHOOK_URL}}",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "f5",
+      "name": "SMS Provider Configured?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        360,
+        -80
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{$env.SELLER_SMS_WEBHOOK_URL}}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{JSON.stringify({to:$json.phone,message:$json.message,lead_id:$json.lead_id,source:'insula_nc_wholesale_followup'})}}",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "id": "f6",
+      "name": "Send SMS Adapter",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        600,
+        -160
+      ],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 2000
+    },
+    {
+      "parameters": {
+        "method": "PUT",
+        "url": "={{$env.INSULACRM_API_URL}}/api/v1/leads/{{$json.lead_id}}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-API-Key",
+              "value": "={{$env.INSULACRM_API_KEY}}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{JSON.stringify({custom_fields:{nc_wholesale_followup:{last_sent_at:new Date().toISOString(),last_message:$json.message,next_follow_up_at:$json.next_follow_up_at,classification:$json.classification,sequence_status:'active'}}})}}",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "id": "f7",
+      "name": "Persist Follow-Up State",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        840,
+        -160
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{$env.INSULACRM_API_URL}}/api/v1/activities",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-API-Key",
+              "value": "={{$env.INSULACRM_API_KEY}}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{JSON.stringify({lead_id:$json.lead_id,type:'sms',subject:'Outbound seller follow-up',body:$json.message,logged_at:new Date().toISOString()})}}",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "id": "f8",
+      "name": "Log Outbound SMS",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1080,
+        -160
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{JSON.stringify({success:true,status:'sent',lead_id:$('Build Follow-Up').first().json.lead_id,next_follow_up_at:$('Build Follow-Up').first().json.next_follow_up_at})}}",
+        "options": {}
+      },
+      "id": "f9",
+      "name": "Respond Sent",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        1320,
+        -160
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{JSON.stringify({success:true,status:'not_sent',lead_id:$('Build Follow-Up').first().json.lead_id,reason:$('Build Follow-Up').first().json.reason,classification:$('Build Follow-Up').first().json.classification})}}",
+        "options": {}
+      },
+      "id": "f10",
+      "name": "Respond Not Sent",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        600,
+        120
+      ]
+    }
+  ],
+  "connections": {
+    "Follow-Up Webhook": {
+      "main": [
+        [
+          {
+            "node": "Load Lead",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Load Lead": {
+      "main": [
+        [
+          {
+            "node": "Build Follow-Up",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Follow-Up": {
+      "main": [
+        [
+          {
+            "node": "Run Seller Contact Gate",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Eligible To Send?": {
+      "main": [
+        [
+          {
+            "node": "SMS Provider Configured?",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respond Not Sent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "SMS Provider Configured?": {
+      "main": [
+        [
+          {
+            "node": "Send SMS Adapter",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respond Not Sent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send SMS Adapter": {
+      "main": [
+        [
+          {
+            "node": "Persist Follow-Up State",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Persist Follow-Up State": {
+      "main": [
+        [
+          {
+            "node": "Log Outbound SMS",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Log Outbound SMS": {
+      "main": [
+        [
+          {
+            "node": "Respond Sent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Run Seller Contact Gate": {
+      "main": [
+        [
+          {
+            "node": "Eligible To Send?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "nc-wholesale-seller-followup-v1",
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "tags": []
+}

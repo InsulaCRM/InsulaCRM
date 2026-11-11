@@ -1,0 +1,275 @@
+{
+  "name": "NC Wholesale - Buyer Outreach & Response Router",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "nc-wholesale/buyer-outreach",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "w1",
+      "name": "Buyer Outreach Trigger",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -900,
+        0
+      ],
+      "webhookId": "nc-wholesale-buyer-outreach"
+    },
+    {
+      "parameters": {
+        "jsCode": "const input=$input.first().json; const body=input.body?.data||input.body||input.data||input; const matches=Array.isArray(body.viable_buyer_matches)?body.viable_buyer_matches:(body.buyer_matches||[]); const top=matches.filter(m=>m.underwriting?.underwriting_pass && m.buyer_id).slice(0,10); return top.map(m=>({json:{...body,match:m,buyer:m.buyer||{buyer_id:m.buyer_id,buyer_name:m.buyer_name},message:'New wholesale opportunity: '+(body.property?.address||'property')+' | Contract $'+Number(body.contract_price||0).toLocaleString()+' | ARV $'+Number(body.property?.arv||0).toLocaleString()+' | Repairs $'+Number(body.property?.repairs||0).toLocaleString()+' | Estimated assignment fee $'+Number(body.assignment_fee||0).toLocaleString()+'. Reply INTERESTED for details, QUESTION for questions, or STOP to opt out.'}}));"
+      },
+      "id": "w2",
+      "name": "Prepare Buyer Messages",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -660,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const now=new Date(); const hour=Number(new Intl.DateTimeFormat('en-US',{hour:'numeric',hour12:false,timeZone:'America/New_York'}).format(now)); const allowed=hour>=8 && hour<21; return $input.all().map(i=>({json:{...i.json,send_allowed:allowed}}));"
+      },
+      "id": "w3",
+      "name": "Send Window Guard",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -420,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "leftValue": "={{$json.send_allowed}}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "w4",
+      "name": "Allowed Now?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        -180,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{$env.BUYER_SMS_PROVIDER_URL}}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{'Bearer '+$env.BUYER_SMS_PROVIDER_API_KEY}}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{JSON.stringify({to:$json.buyer.phone,body:$json.message,metadata:{deal_id:$json.deal_id,match_id:$json.match.match_id}})}}",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "id": "w5",
+      "name": "Send Buyer SMS",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        60,
+        -80
+      ]
+    },
+    {
+      "parameters": {
+        "method": "PUT",
+        "url": "={{$env.INSULACRM_API_URL}}/api/v1/buyers/{{$json.match.buyer_id}}/disposition-matches/{{$json.match.match_id}}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-API-Key",
+              "value": "={{$env.INSULACRM_API_KEY}}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{JSON.stringify({outreach_status:'sent',outreach_channel:'sms',outreach_sent_at:new Date().toISOString()})}}",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "id": "w6",
+      "name": "Record Outreach",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        300,
+        -80
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{JSON.stringify({success:true,queued:$input.all().length,message:'Buyer outreach processed. Buyers can opt out with STOP.'})}}",
+        "options": {}
+      },
+      "id": "w7",
+      "name": "Respond",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        540,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{$env.INSULACRM_API_URL}}/api/v1/activities",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-API-Key",
+              "value": "={{$env.INSULACRM_API_KEY}}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{JSON.stringify({lead_id:$json.lead_id,type:'task',subject:'Buyer outreach deferred — outside send window',body:'Buyer outreach was not sent because the current Eastern-time hour is outside the configured 8 AM–9 PM window. Schedule the workflow for the next permitted window.',logged_at:new Date().toISOString()})}}",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "id": "w8",
+      "name": "Log Deferred",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        60,
+        140
+      ]
+    }
+  ],
+  "connections": {
+    "Buyer Outreach Trigger": {
+      "main": [
+        [
+          {
+            "node": "Prepare Buyer Messages",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Buyer Messages": {
+      "main": [
+        [
+          {
+            "node": "Send Window Guard",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Window Guard": {
+      "main": [
+        [
+          {
+            "node": "Allowed Now?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Allowed Now?": {
+      "main": [
+        [
+          {
+            "node": "Send Buyer SMS",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Log Deferred",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Buyer SMS": {
+      "main": [
+        [
+          {
+            "node": "Record Outreach",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Record Outreach": {
+      "main": [
+        [
+          {
+            "node": "Respond",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Log Deferred": {
+      "main": [
+        [
+          {
+            "node": "Respond",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "buyer-outreach-v1"
+}

@@ -1,0 +1,93 @@
+{
+  "name": "NC Wholesale - Contract Executed Archive",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "nc-wholesale/contract-executed",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "ce1",
+      "name": "Contract Executed Trigger",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [-600, 0],
+      "webhookId": "nc-wholesale-contract-executed"
+    },
+    {
+      "parameters": {
+        "jsCode": "const body=$input.first().json.body||$input.first().json; const data=body.data||body; return [{json:{...data, event:body.event||'deal.contract.executed', received_at:new Date().toISOString()}}];"
+      },
+      "id": "ce2",
+      "name": "Normalize Event",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [-360, 0]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{$env.INSULACRM_API_URL}}/api/v1/deals/{{$json.deal_id}}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-API-Key",
+              "value": "={{$env.INSULACRM_API_KEY}}"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "id": "ce3",
+      "name": "Reload Deal",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [-120, 0]
+    },
+    {
+      "parameters": {
+        "jsCode": "const deal=$input.first().json; return [{json:{success:true,action:'contract_executed_archived',deal_id:deal.id,stage:deal.stage,property:deal.lead?.property?.address||null,seller:deal.lead?.full_name||null,buyer:deal.committed_buyer?.legal_name||deal.buyer_legal_name||null,message:'Executed contract is archived in InsulaCRM. Do not treat this event as a closing completion.'}}];"
+      },
+      "id": "ce4",
+      "name": "Prepare Archive Confirmation",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [120, 0]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{JSON.stringify($json)}}",
+        "options": {}
+      },
+      "id": "ce5",
+      "name": "Respond",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [360, 0]
+    }
+  ],
+  "connections": {
+    "Contract Executed Trigger": {
+      "main": [[{"node":"Normalize Event","type":"main","index":0}]]
+    },
+    "Normalize Event": {
+      "main": [[{"node":"Reload Deal","type":"main","index":0}]]
+    },
+    "Reload Deal": {
+      "main": [[{"node":"Prepare Archive Confirmation","type":"main","index":0}]]
+    },
+    "Prepare Archive Confirmation": {
+      "main": [[{"node":"Respond","type":"main","index":0}]]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "contract-executed-archive-v1"
+}

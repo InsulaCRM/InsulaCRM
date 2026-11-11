@@ -1,0 +1,124 @@
+{
+  "name": "NC Wholesale - Tracerfy Batch Skip Trace",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "nc-wholesale/skiptrace/batch",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "trigger",
+      "name": "Batch Trace Request",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [0, 0],
+      "webhookId": "nc-wholesale-skiptrace-batch"
+    },
+    {
+      "parameters": {
+        "jsCode": "const body = $json.body || $json;\nconst records = Array.isArray(body.records) ? body.records : [];\nif (!records.length) throw new Error('records must contain at least one property record');\nconst allowed = new Set(['normal','advanced','enhanced']);\nconst traceType = allowed.has(String(body.trace_type || 'normal')) ? String(body.trace_type || 'normal') : 'normal';\nreturn [{ json: { json_data: records, trace_type: traceType, address_column: 'address', city_column: 'city', state_column: 'state', zip_column: 'zip', first_name_column: 'first_name', last_name_column: 'last_name', requested_at: new Date().toISOString() } }];"
+      },
+      "id": "normalize",
+      "name": "Normalize Batch Request",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [280, 0]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.TRACERFY_BASE_URL || 'https://tracerfy.com/v1/api' }}/trace/",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.TRACERFY_API_KEY }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "multipart-form-data",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "json_data",
+              "value": "={{ JSON.stringify($json.json_data) }}"
+            },
+            {
+              "name": "address_column",
+              "value": "={{ $json.address_column }}"
+            },
+            {
+              "name": "city_column",
+              "value": "={{ $json.city_column }}"
+            },
+            {
+              "name": "state_column",
+              "value": "={{ $json.state_column }}"
+            },
+            {
+              "name": "zip_column",
+              "value": "={{ $json.zip_column }}"
+            },
+            {
+              "name": "first_name_column",
+              "value": "={{ $json.first_name_column }}"
+            },
+            {
+              "name": "last_name_column",
+              "value": "={{ $json.last_name_column }}"
+            },
+            {
+              "name": "trace_type",
+              "value": "={{ $json.trace_type }}"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 60000,
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "id": "tracerfy",
+      "name": "Tracerfy Batch Trace",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [580, 0]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ success: true, provider: 'tracerfy', result: $json }) }}",
+        "options": {}
+      },
+      "id": "response",
+      "name": "Return Queue Result",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [860, 0]
+    }
+  ],
+  "connections": {
+    "Batch Trace Request": {
+      "main": [[{"node": "Normalize Batch Request", "type": "main", "index": 0}]]
+    },
+    "Normalize Batch Request": {
+      "main": [[{"node": "Tracerfy Batch Trace", "type": "main", "index": 0}]]
+    },
+    "Tracerfy Batch Trace": {
+      "main": [[{"node": "Return Queue Result", "type": "main", "index": 0}]]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "saveDataErrorExecution": "all",
+    "saveDataSuccessExecution": "all"
+  },
+  "active": false
+}

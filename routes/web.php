@@ -10,6 +10,7 @@ use App\Http\Controllers\DncController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\ActivityController;
 use App\Http\Controllers\DealController;
+use App\Http\Controllers\DealArchiveController;
 use App\Http\Controllers\LeadController;
 use App\Http\Controllers\ListController;
 use App\Http\Controllers\PluginController;
@@ -287,12 +288,18 @@ Route::middleware(['auth', 'tenant', 'require2fa'])->group(function () {
     // ── Pipeline / Deals: all except field_scout ─────────────────────
     Route::middleware('role:admin,agent,acquisition_agent,disposition_agent,listing_agent,buyers_agent')->group(function () {
         Route::get('/pipeline/export', [DealController::class, 'export'])->name('deals.export');
+        Route::get('/pipeline/archive', [DealArchiveController::class, 'index'])->name('deals.archive');
+        Route::get('/pipeline/intake', [DealController::class, 'intake'])->name('deals.intake');
+        Route::get('/pipeline/intake/{lead}', [DealController::class, 'intake'])->name('deals.intake.lead');
+        Route::post('/pipeline/intake', [DealController::class, 'storeIntake'])->name('deals.intake.store');
+        Route::post('/pipeline/{deal}/contract-review', [DealController::class, 'contractReview'])->name('deals.contractReview');
         Route::get('/pipeline', [DealController::class, 'pipeline'])->name('pipeline');
         Route::get('/pipeline/{deal}', [DealController::class, 'show'])->name('deals.show');
         Route::put('/pipeline/{deal}', [DealController::class, 'update'])->name('deals.update');
         Route::patch('/pipeline/{deal}', [DealController::class, 'update'])->name('deals.quickUpdate');
         Route::patch('/pipeline/{deal}/stage', [DealController::class, 'updateStage'])->name('deals.updateStage');
         Route::post('/pipeline/{deal}/documents', [DealController::class, 'uploadDocument'])->name('deals.uploadDocument');
+        Route::post('/pipeline/{deal}/signature-requests', [DealController::class, 'sendOpenSign'])->name('deals.sendOpenSign');
         Route::get('/pipeline/documents/{document}/download', [DealController::class, 'downloadDocument'])->name('deals.downloadDocument');
         Route::post('/pipeline/{deal}/notify-buyer/{match}', [DealController::class, 'notifyBuyer'])->name('deals.notifyBuyer');
 
@@ -505,6 +512,8 @@ Route::middleware(['auth', 'tenant', 'require2fa'])->group(function () {
 
         // Integrations & Security
         Route::put('/settings/security', [IntegrationController::class, 'updateSecurity'])->name('settings.updateSecurity');
+        Route::put('/settings/opensign', [SettingsController::class, 'updateOpenSign'])->name('settings.updateOpenSign');
+        Route::post('/settings/opensign/test', [SettingsController::class, 'testOpenSignConnection'])->name('settings.testOpenSign');
         Route::post('/settings/integrations', [IntegrationController::class, 'store'])->name('integrations.store');
         Route::patch('/settings/integrations/{integration}/toggle', [IntegrationController::class, 'toggle'])->name('integrations.toggle');
         Route::delete('/settings/integrations/{integration}', [IntegrationController::class, 'destroy'])->name('integrations.destroy');

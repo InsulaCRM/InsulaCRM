@@ -3,7 +3,9 @@
 use App\Http\Controllers\Api\ActivityApiController;
 use App\Http\Controllers\Api\BuyerApiController;
 use App\Http\Controllers\Api\DealApiController;
+use App\Http\Controllers\Api\DealSignatureController;
 use App\Http\Controllers\Api\LeadIngestController;
+use App\Http\Controllers\Api\OpenSignWebhookController;
 use App\Http\Controllers\Api\PropertyApiController;
 use App\Http\Controllers\Api\StatsApiController;
 use Illuminate\Support\Facades\Route;
@@ -18,6 +20,11 @@ use Illuminate\Support\Facades\Route;
 |
 */
 
+// OpenSign calls this endpoint directly. It is authenticated with the
+// OpenSign HMAC webhook signature instead of the InsulaCRM tenant API key.
+Route::post('/v1/webhooks/opensign', [OpenSignWebhookController::class, 'handle'])
+    ->middleware(['throttle:api']);
+
 Route::prefix('v1')->middleware(['api.key', 'throttle:api', 'api.log'])->group(function () {
 
     // Leads
@@ -25,6 +32,7 @@ Route::prefix('v1')->middleware(['api.key', 'throttle:api', 'api.log'])->group(f
     Route::post('/leads', [LeadIngestController::class, 'store']);
     Route::get('/leads/{id}', [LeadIngestController::class, 'show']);
     Route::put('/leads/{id}', [LeadIngestController::class, 'update']);
+    Route::post('/leads/{id}/convert-to-deal', [LeadIngestController::class, 'convertToDeal']);
 
     // Deals
     Route::get('/deals', [DealApiController::class, 'index']);
@@ -32,12 +40,25 @@ Route::prefix('v1')->middleware(['api.key', 'throttle:api', 'api.log'])->group(f
     Route::get('/deals/stages', [DealApiController::class, 'stages']);
     Route::get('/deals/{id}', [DealApiController::class, 'show']);
     Route::put('/deals/{id}', [DealApiController::class, 'update']);
+    Route::get('/deals/{id}/disposition-package', [DealApiController::class, 'dispositionPackage']);
+    Route::post('/deals/{id}/buyer-commitment', [DealApiController::class, 'commitBuyer']);
+    Route::get('/deals/{id}/closing-readiness', [DealApiController::class, 'closingReadiness']);
+    Route::put('/deals/{id}/checklist/{itemId}', [DealApiController::class, 'markChecklistItem']);
+    Route::post('/deals/{id}/advance-closing', [DealApiController::class, 'advanceClosing']);
+    Route::post('/deals/{id}/assignment-complete', [DealApiController::class, 'completeAssignment']);
+    Route::post('/deals/{id}/closing-complete', [DealApiController::class, 'completeClosing']);
+
+    // Deal e-signature
+    Route::get('/deals/{id}/signature-requests', [DealSignatureController::class, 'index']);
+    Route::post('/deals/{id}/signature-requests', [DealSignatureController::class, 'store']);
 
     // Buyers
     Route::get('/buyers', [BuyerApiController::class, 'index']);
     Route::post('/buyers', [BuyerApiController::class, 'store']);
     Route::get('/buyers/{id}', [BuyerApiController::class, 'show']);
     Route::put('/buyers/{id}', [BuyerApiController::class, 'update']);
+    Route::get('/buyers/{id}/disposition-matches', [BuyerApiController::class, 'dispositionMatches']);
+    Route::put('/buyers/{id}/disposition-matches/{matchId}', [BuyerApiController::class, 'updateMatch']);
 
     // Properties
     Route::get('/properties', [PropertyApiController::class, 'index']);

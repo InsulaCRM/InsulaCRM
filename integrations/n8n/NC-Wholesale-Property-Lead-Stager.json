@@ -1,0 +1,93 @@
+{
+  "name": "NC Wholesale - Property Lead Stager",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "nc-wholesale/property-stage",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "trigger",
+      "name": "Property Candidate",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [0, 0],
+      "webhookId": "nc-wholesale-property-stage"
+    },
+    {
+      "parameters": {
+        "jsCode": "const body = $json.body || $json;\nconst owner = body.owner || {};\nconst property = body.property || body;\nconst first = String(owner.first_name || body.first_name || '').trim();\nconst last = String(owner.last_name || body.last_name || '').trim();\nconst address = String(property.address || property.property_address || '').trim();\nif (!first || !last || !address) throw new Error('owner first_name, last_name and property address are required');\nconst distress = Array.isArray(property.distress_markers) ? property.distress_markers : [];\nreturn [{ json: { first_name: first, last_name: last, phone: owner.phone || body.phone || null, email: owner.email || body.email || null, source: body.source || 'batchdata', notes: body.notes || null, property_address: address, property_city: property.city || property.property_city || null, property_state: String(property.state || property.property_state || 'NC').toUpperCase(), property_zip: property.zip_code || property.zip || property.property_zip || null, property_type: property.property_type || null, external_id: body.external_id || property.external_id || null, distress_markers: distress, estimated_value: property.estimated_value || property.market_value || null, asking_price: property.asking_price || null, condition: property.condition || null, source_payload_version: '1' } }];"
+      },
+      "id": "normalize",
+      "name": "Normalize Property Candidate",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [300, 0]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.INSULA_BASE_URL }}/api/v1/leads",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-API-Key",
+              "value": "={{ $env.INSULA_API_KEY }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json) }}",
+        "options": {
+          "timeout": 30000,
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "id": "insula",
+      "name": "Create Lead + Property in InsulaCRM",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [600, 0]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify($json) }}",
+        "options": {}
+      },
+      "id": "response",
+      "name": "Return Staging Result",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [900, 0]
+    }
+  ],
+  "connections": {
+    "Property Candidate": {
+      "main": [[{"node": "Normalize Property Candidate", "type": "main", "index": 0}]]
+    },
+    "Normalize Property Candidate": {
+      "main": [[{"node": "Create Lead + Property in InsulaCRM", "type": "main", "index": 0}]]
+    },
+    "Create Lead + Property in InsulaCRM": {
+      "main": [[{"node": "Return Staging Result", "type": "main", "index": 0}]]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "saveDataErrorExecution": "all",
+    "saveDataSuccessExecution": "all"
+  },
+  "active": false
+}

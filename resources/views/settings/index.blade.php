@@ -1659,6 +1659,114 @@ Content-Type: application/json</code></pre>
 
             <!-- Integrations Tab -->
             <div class="tab-pane" id="tab-integrations">
+                @php
+                    $openSignSettings = $tenant->custom_options['opensign'] ?? [];
+                    $openSignConfigured = !empty($openSignSettings['api_token']);
+                    $openSignBaseUrl = $openSignSettings['base_url'] ?? config('services.opensign.base_url', 'https://sandbox.opensignlabs.com/api/v1.2');
+                    $openSignSenderName = $openSignSettings['sender_name'] ?? config('services.opensign.sender_name', $tenant->name);
+                    $openSignSenderEmail = $openSignSettings['sender_email'] ?? config('services.opensign.sender_email', config('mail.from.address'));
+                @endphp
+
+                <!-- OpenSign E-Signature -->
+                <div class="card mb-4 {{ $openSignConfigured ? 'border-success' : 'border-warning' }}">
+                    <div class="card-header">
+                        <div class="d-flex align-items-center justify-content-between">
+                            <div>
+                                <h3 class="card-title mb-1">{{ __('OpenSign E-Signature') }}</h3>
+                                <div class="text-secondary small">{{ __('Send wholesale contracts for signature and automatically archive executed documents and certificates.') }}</div>
+                            </div>
+                            @if($openSignConfigured)
+                                <span class="badge bg-green-lt">{{ __('Configured') }}</span>
+                            @else
+                                <span class="badge bg-warning-lt">{{ __('Not Configured') }}</span>
+                            @endif
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <form action="{{ route('settings.updateOpenSign') }}" method="POST">
+                            @csrf
+                            @method('PUT')
+                            <div class="row">
+                                <div class="col-md-8 mb-3">
+                                    <label class="form-label">{{ __('OpenSign API URL') }}</label>
+                                    <input type="url" name="opensign_base_url" class="form-control" value="{{ $openSignBaseUrl }}" required>
+                                    <small class="form-hint">{{ __('Sandbox: https://sandbox.opensignlabs.com/api/v1.2 — switch to your production OpenSign API URL when ready.') }}</small>
+                                </div>
+                                <div class="col-md-4 mb-3">
+                                    <label class="form-label">{{ __('Sender Name') }}</label>
+                                    <input type="text" name="opensign_sender_name" class="form-control" value="{{ $openSignSenderName }}" required>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">{{ __('OpenSign API Token') }}</label>
+                                    <input type="password" name="opensign_api_token" class="form-control" placeholder="{{ $openSignConfigured ? __('Saved — leave blank to keep it') : __('Paste your OpenSign API token') }}" autocomplete="new-password">
+                                    <small class="form-hint">{{ __('Stored encrypted. It is never displayed after saving.') }}</small>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">{{ __('Webhook Secret') }}</label>
+                                    <input type="password" name="opensign_webhook_secret" class="form-control" placeholder="{{ !empty($openSignSettings['webhook_secret']) ? __('Saved — leave blank to keep it') : __('Enter the OpenSign webhook signing secret') }}" autocomplete="new-password">
+                                    <small class="form-hint">{{ __('Used to verify completed/signature lifecycle webhooks.') }}</small>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">{{ __('Sender Email') }}</label>
+                                    <input type="email" name="opensign_sender_email" class="form-control" value="{{ $openSignSenderEmail }}" required>
+                                </div>
+                                <div class="col-md-6 mb-3 d-flex align-items-end">
+                                    <button type="submit" class="btn btn-primary">{{ __('Save OpenSign Settings') }}</button>
+                                </div>
+                            </div>
+                        </form>
+
+                        <div class="border-top pt-3 mt-3">
+                            <div class="fw-bold mb-2">{{ __('Reusable OpenSign Templates') }}</div>
+                            <div class="text-secondary small mb-3">{{ __('Optional: enter the OpenSign template ID for each document type. When configured, new signature requests use the matching template with pre-placed signer fields.') }}</div>
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">{{ __('Purchase Agreement Template ID') }}</label>
+                                    <input type="text" name="opensign_template_purchase_agreement" class="form-control" value="{{ $openSignSettings['template_ids']['purchase_agreement'] ?? '' }}" placeholder="{{ __('Optional OpenSign template ID') }}">
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">{{ __('Assignment Template ID') }}</label>
+                                    <input type="text" name="opensign_template_assignment" class="form-control" value="{{ $openSignSettings['template_ids']['assignment'] ?? '' }}" placeholder="{{ __('Optional OpenSign template ID') }}">
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">{{ __('Double Close Template ID') }}</label>
+                                    <input type="text" name="opensign_template_double_close" class="form-control" value="{{ $openSignSettings['template_ids']['double_close'] ?? '' }}" placeholder="{{ __('Optional OpenSign template ID') }}">
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">{{ __('Novation Template ID') }}</label>
+                                    <input type="text" name="opensign_template_novation" class="form-control" value="{{ $openSignSettings['template_ids']['novation'] ?? '' }}" placeholder="{{ __('Optional OpenSign template ID') }}">
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="border-top pt-3 mt-2">
+                            <div class="d-flex flex-wrap align-items-center gap-2">
+                                <form action="{{ route('settings.testOpenSign') }}" method="POST" class="d-inline" data-opensign-test>
+                                    @csrf
+                                    <input type="hidden" name="opensign_base_url" value="{{ $openSignBaseUrl }}">
+                                    <input type="hidden" name="opensign_api_token" value="">
+                                    <button type="button" class="btn btn-outline-secondary btn-sm" onclick="testOpenSignConnection()">
+                                        {{ __('Test OpenSign Connection') }}
+                                    </button>
+                                </form>
+                                <span class="text-secondary small">{{ __('Save the token first, then test the connection.') }}</span>
+                            </div>
+                            <div id="opensign-test-result" class="mt-2"></div>
+                        </div>
+
+                        <div class="alert alert-info mt-3 mb-0">
+                            <div class="fw-bold">{{ __('Webhook URL') }}</div>
+                            <code>{{ url('/api/v1/webhooks/opensign') }}</code>
+                            <div class="small mt-1">{{ __('Copy this into OpenSign webhook settings. The webhook secret above must match the secret configured in OpenSign.') }}</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Security Settings -->
                 <!-- Security Settings -->
                 <div class="card mb-4">
                     <div class="card-header">
@@ -3217,3 +3325,30 @@ if (testBtn) {
 @endpush
 
 
+
+<script>
+function testOpenSignConnection() {
+    const form = document.querySelector('[data-opensign-test]');
+    const result = document.getElementById('opensign-test-result');
+    const tokenInput = document.querySelector('input[name="opensign_api_token"]');
+    const hiddenToken = form.querySelector('input[name="opensign_api_token"]');
+    hiddenToken.value = tokenInput ? tokenInput.value : '';
+    result.innerHTML = '<span class="text-secondary">Testing OpenSign connection...</span>';
+
+    fetch(form.action, {
+        method: 'POST',
+        headers: {
+            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+            'Accept': 'application/json',
+        },
+        body: new FormData(form),
+    })
+    .then(async response => {
+        const data = await response.json();
+        result.innerHTML = '<span class="' + (data.success ? 'text-success' : 'text-danger') + '">' + data.message + '</span>';
+    })
+    .catch(() => {
+        result.innerHTML = '<span class="text-danger">OpenSign connection test failed.</span>';
+    });
+}
+</script>

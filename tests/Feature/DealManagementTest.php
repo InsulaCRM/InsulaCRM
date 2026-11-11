@@ -26,7 +26,10 @@ class DealManagementTest extends TestCase
     public function test_admin_can_update_deal_stage(): void
     {
         $this->actingAsAdmin();
-        $deal = $this->createDeal(['stage' => 'prospecting']);
+        $deal = $this->createDeal([
+            'stage' => 'prospecting',
+            'contract_gate_status' => 'approved',
+        ]);
 
         $response = $this->patch("/pipeline/{$deal->id}/stage", [
             'stage' => 'under_contract',

@@ -7,6 +7,11 @@ use App\Models\User;
 
 class DealPolicy
 {
+    public function create(User $user): bool
+    {
+        return $user->isAdmin() || $user->isAgent() || $user->isDispositionAgent() || $user->isAcquisitionAgent();
+    }
+
     public function viewAny(User $user): bool
     {
         return $user->isAdmin() || $user->isAgent() || $user->isDispositionAgent();
