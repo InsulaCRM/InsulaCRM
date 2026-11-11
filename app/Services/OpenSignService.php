@@ -172,6 +172,7 @@ class OpenSignService
         }
 
         $event = strtolower((string) ($payload['event'] ?? 'unknown'));
+        $wasCompleted = $requestRecord->status === 'completed' || !empty($requestRecord->completed_at);
 
         $updates = [
             'last_event' => $event,
@@ -197,13 +198,17 @@ class OpenSignService
         $requestRecord->update($updates);
 
         if ($event === 'completed' && (empty($requestRecord->signed_pdf_path) || empty($requestRecord->certificate_path))) {
-            $this->archiveCompletedDocument($requestRecord, $payload);
+            $this->archiveCompletedDocument($requestRecord, $payload, !$wasCompleted);
         }
 
         return $requestRecord->fresh();
     }
 
-    protected function archiveCompletedDocument(DealSignatureRequest $requestRecord, array $payload): void
+    protected function archiveCompletedDocument(
+        DealSignatureRequest $requestRecord,
+        array $payload,
+        bool $emitCompletionEvent = true
+    ): void
     {
         $deal = $requestRecord->deal()->withoutGlobalScopes()->with(['lead.property', 'committedBuyer'])->firstOrFail();
         $disk = Storage::disk(config('filesystems.default', 'local'));
@@ -251,6 +256,10 @@ class OpenSignService
                 }
                 $requestRecord->update(['certificate_path' => $path]);
             }
+        }
+
+        if (!$emitCompletionEvent) {
+            return;
         }
 
         Activity::withoutGlobalScopes()->create([
