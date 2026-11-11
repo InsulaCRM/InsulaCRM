@@ -121,7 +121,7 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{JSON.stringify({stage:'under_contract',contract_date:$('Validate Contract Controls').first().json.request.contract_date||new Date().toISOString().slice(0,10),due_diligence_end_date:$('Validate Contract Controls').first().json.control.due_diligence_end_date,closing_date:$('Validate Contract Controls').first().json.control.closing_date,transaction_structure:$('Validate Contract Controls').first().json.control.transaction_structure,attorney_approved_template_id:$('Validate Contract Controls').first().json.control.attorney_approved_template_id,executed_contract_status:'executed',assignment_rights_confirmed:$('Validate Contract Controls').first().json.request.assignment_rights_confirmed,emd_required:$('Validate Contract Controls').first().json.control.emd.required==='yes'?true:$('Validate Contract Controls').first().json.control.emd.required===true?true:null,earnest_money:$('Validate Contract Controls').first().json.control.emd.amount,emd_source:$('Validate Contract Controls').first().json.control.emd.source,buyer_covers_emd:$('Validate Contract Controls').first().json.control.emd.buyer_covers,emd_funding_confirmed:$('Validate Contract Controls').first().json.control.emd.funding_confirmed,emd_exception_reason:$('Validate Contract Controls').first().json.control.emd.exception_reason,closing_provider_type:$('Validate Contract Controls').first().json.control.closing_provider.type,buyer_preferred_closing_provider:$('Validate Contract Controls').first().json.control.closing_provider.buyer_preferred,seller_preferred_closing_provider:$('Validate Contract Controls').first().json.control.closing_provider.seller_preferred,confirmed_closing_provider:$('Validate Contract Controls').first().json.control.closing_provider.confirmed_provider,contract_review_status:'approved',no_buyer_status:'not_applicable',extension_termination_review_status:'not_needed',notes:'Contract controls approved using attorney-reviewed template '+$('Validate Contract Controls').first().json.control.attorney_approved_template_id})}})",
+        "jsonBody": "={{JSON.stringify({stage:'under_contract',contract_gate_status:'approved',contract_gate_reason:'Contract controls approved. Deal moved under contract.',contract_gate_blockers:{},contract_gate_checked_at:new Date().toISOString(),contract_date:$('Validate Contract Controls').first().json.request.contract_date||new Date().toISOString().slice(0,10),due_diligence_end_date:$('Validate Contract Controls').first().json.control.due_diligence_end_date,closing_date:$('Validate Contract Controls').first().json.control.closing_date,transaction_structure:$('Validate Contract Controls').first().json.control.transaction_structure,attorney_approved_template_id:$('Validate Contract Controls').first().json.control.attorney_approved_template_id,executed_contract_status:'executed',assignment_rights_confirmed:$('Validate Contract Controls').first().json.request.assignment_rights_confirmed,emd_required:$('Validate Contract Controls').first().json.control.emd.required==='yes'?true:$('Validate Contract Controls').first().json.control.emd.required===true?true:null,earnest_money:$('Validate Contract Controls').first().json.control.emd.amount,emd_source:$('Validate Contract Controls').first().json.control.emd.source,buyer_covers_emd:$('Validate Contract Controls').first().json.control.emd.buyer_covers,emd_funding_confirmed:$('Validate Contract Controls').first().json.control.emd.funding_confirmed,emd_exception_reason:$('Validate Contract Controls').first().json.control.emd.exception_reason,closing_provider_type:$('Validate Contract Controls').first().json.control.closing_provider.type,buyer_preferred_closing_provider:$('Validate Contract Controls').first().json.control.closing_provider.buyer_preferred,seller_preferred_closing_provider:$('Validate Contract Controls').first().json.control.closing_provider.seller_preferred,confirmed_closing_provider:$('Validate Contract Controls').first().json.control.closing_provider.confirmed_provider,contract_review_status:'approved',no_buyer_status:'not_applicable',extension_termination_review_status:'not_needed',notes:'Contract controls approved using attorney-reviewed template '+$('Validate Contract Controls').first().json.control.attorney_approved_template_id})}})",
         "options": {
           "timeout": 30000
         }
@@ -182,7 +182,7 @@
     {
       "parameters": {
         "respondWith": "json",
-        "responseBody": "={{JSON.stringify({success:false,blocked:true,lead_id:$('Validate Contract Controls').first().json.lead_id,checks:$('Validate Contract Controls').first().json.checks,message:'Contract execution blocked. Use an attorney-reviewed template and satisfy every transaction-protection control before moving under contract.'})}}",
+        "responseBody": "={{JSON.stringify({success:false,blocked:true,lead_id:$('Validate Contract Controls').first().json.lead_id,deal_id:$('Validate Contract Controls').first().json.deal_id,checks:$('Validate Contract Controls').first().json.checks,message:'Contract execution blocked. The Deal record was updated with the gate blockers and remains in its current stage.'})}}",
         "options": {}
       },
       "id": "c9",
@@ -192,6 +192,35 @@
       "position": [
         240,
         180
+      ]
+    },
+    {
+      "parameters": {
+        "method": "PUT",
+        "url": "={{$env.INSULACRM_API_URL}}/api/v1/deals/{{ $('Validate Contract Controls').first().json.deal_id }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-API-Key",
+              "value": "={{$env.INSULACRM_API_KEY}}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{JSON.stringify({contract_gate_status:'blocked',contract_gate_reason:'Contract execution blocked. One or more protection controls were not satisfied.',contract_gate_blockers:$('Validate Contract Controls').first().json.checks,contract_gate_checked_at:new Date().toISOString()})}}",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "id": "c10",
+      "name": "Persist Gate Blocked Result",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        240,
+        120
       ]
     }
   ],
@@ -251,7 +280,7 @@
         ],
         [
           {
-            "node": "Respond Blocked",
+            "node": "Persist Gate Blocked Result",
             "type": "main",
             "index": 0
           }
@@ -274,6 +303,17 @@
         [
           {
             "node": "Respond Approved",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Persist Gate Blocked Result": {
+      "main": [
+        [
+          {
+            "node": "Respond Blocked",
             "type": "main",
             "index": 0
           }
