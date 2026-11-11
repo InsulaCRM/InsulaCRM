@@ -89,7 +89,7 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ phone: $json.primary_phone, email: $json.primary_email, do_not_contact: $json.do_not_contact }) }}",
+        "jsonBody": "={{ JSON.stringify(Object.fromEntries(Object.entries({ phone: $json.primary_phone, email: $json.primary_email, do_not_contact: $json.do_not_contact }).filter(([, value]) => value !== null && value !== undefined))) }}",
         "options": {
           "timeout": 30000,
           "response": {
