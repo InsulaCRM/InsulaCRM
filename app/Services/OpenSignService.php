@@ -14,9 +14,44 @@ use RuntimeException;
 
 class OpenSignService
 {
-    public function configured(): bool
+    public function configured(?int $tenantId = null): bool
     {
+        if ($tenantId) {
+            $settings = $this->settings($tenantId);
+            if (!empty($settings['api_token'])) {
+                return true;
+            }
+        }
+
         return (bool) config('services.opensign.api_token');
+    }
+
+    public function settings(?int $tenantId = null): array
+    {
+        $settings = [];
+
+        if ($tenantId) {
+            $tenant = \App\Models\Tenant::withoutGlobalScopes()->find($tenantId);
+            $settings = $tenant?->custom_options['opensign'] ?? [];
+
+            foreach (['api_token', 'webhook_secret'] as $key) {
+                if (!empty($settings[$key])) {
+                    try {
+                        $settings[$key] = decrypt($settings[$key]);
+                    } catch (\Throwable $e) {
+                        // Backward-compatible with legacy plain-text tenant settings.
+                    }
+                }
+            }
+        }
+
+        return array_merge([
+            'base_url' => config('services.opensign.base_url'),
+            'api_token' => config('services.opensign.api_token'),
+            'webhook_secret' => config('services.opensign.webhook_secret'),
+            'sender_name' => config('services.opensign.sender_name', config('app.name')),
+            'sender_email' => config('services.opensign.sender_email'),
+        ], array_filter($settings, static fn ($value) => $value !== null && $value !== ''));
     }
 
     public function createSignatureRequest(
@@ -26,7 +61,7 @@ class OpenSignService
         array $widgets,
         array $options = []
     ): DealSignatureRequest {
-        if (!$this->configured()) {
+        if (!$this->configured($deal->tenant_id)) {
             throw new RuntimeException('OpenSign is not configured. Set OPENSIGN_API_TOKEN before sending a signature request.');
         }
 
@@ -65,8 +100,8 @@ class OpenSignService
             'enableOTP' => (bool) ($options['enable_otp'] ?? true),
             'enableTour' => false,
             'redirect_url' => $options['redirect_url'] ?? '',
-            'sender_name' => $options['sender_name'] ?? config('services.opensign.sender_name', config('app.name')),
-            'sender_email' => $options['sender_email'] ?? config('services.opensign.sender_email'),
+            'sender_name' => $options['sender_name'] ?? $this->settings($deal->tenant_id)['sender_name'] ?? config('services.opensign.sender_name', config('app.name')),
+            'sender_email' => $options['sender_email'] ?? $this->settings($deal->tenant_id)['sender_email'] ?? config('services.opensign.sender_email'),
             'allow_modifications' => false,
             'auto_reminder' => (bool) ($options['auto_reminder'] ?? true),
             'remind_once_in_every' => (int) ($options['remind_once_in_every'] ?? 3),
@@ -243,10 +278,11 @@ class OpenSignService
 
     protected function request(string $method, string $path, array $payload = []): Response
     {
-        $baseUrl = rtrim(config('services.opensign.base_url', 'https://sandbox.opensignlabs.com/api/v1.2'), '/');
+        $settings = $this->settings();
+        $baseUrl = rtrim($settings['base_url'] ?: 'https://sandbox.opensignlabs.com/api/v1.2', '/');
 
         return Http::acceptJson()
-            ->withHeaders(['x-api-token' => config('services.opensign.api_token')])
+            ->withHeaders(['x-api-token' => $settings['api_token']])
             ->timeout(90)
             ->{$method}($baseUrl . $path, $payload);
     }
