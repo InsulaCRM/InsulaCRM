@@ -1720,6 +1720,29 @@ Content-Type: application/json</code></pre>
                             </div>
                         </form>
 
+                        <div class="border-top pt-3 mt-3">
+                            <div class="fw-bold mb-2">{{ __('Reusable OpenSign Templates') }}</div>
+                            <div class="text-secondary small mb-3">{{ __('Optional: enter the OpenSign template ID for each document type. When configured, new signature requests use the matching template with pre-placed signer fields.') }}</div>
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">{{ __('Purchase Agreement Template ID') }}</label>
+                                    <input type="text" name="opensign_template_purchase_agreement" class="form-control" value="{{ $openSignSettings['template_ids']['purchase_agreement'] ?? '' }}" placeholder="{{ __('Optional OpenSign template ID') }}">
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">{{ __('Assignment Template ID') }}</label>
+                                    <input type="text" name="opensign_template_assignment" class="form-control" value="{{ $openSignSettings['template_ids']['assignment'] ?? '' }}" placeholder="{{ __('Optional OpenSign template ID') }}">
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">{{ __('Double Close Template ID') }}</label>
+                                    <input type="text" name="opensign_template_double_close" class="form-control" value="{{ $openSignSettings['template_ids']['double_close'] ?? '' }}" placeholder="{{ __('Optional OpenSign template ID') }}">
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">{{ __('Novation Template ID') }}</label>
+                                    <input type="text" name="opensign_template_novation" class="form-control" value="{{ $openSignSettings['template_ids']['novation'] ?? '' }}" placeholder="{{ __('Optional OpenSign template ID') }}">
+                                </div>
+                            </div>
+                        </div>
+
                         <div class="border-top pt-3 mt-2">
                             <div class="d-flex flex-wrap align-items-center gap-2">
                                 <form action="{{ route('settings.testOpenSign') }}" method="POST" class="d-inline" data-opensign-test>
