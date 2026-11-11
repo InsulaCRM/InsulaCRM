@@ -512,6 +512,8 @@ Route::middleware(['auth', 'tenant', 'require2fa'])->group(function () {
 
         // Integrations & Security
         Route::put('/settings/security', [IntegrationController::class, 'updateSecurity'])->name('settings.updateSecurity');
+        Route::put('/settings/opensign', [SettingsController::class, 'updateOpenSign'])->name('settings.updateOpenSign');
+        Route::post('/settings/opensign/test', [SettingsController::class, 'testOpenSignConnection'])->name('settings.testOpenSign');
         Route::post('/settings/integrations', [IntegrationController::class, 'store'])->name('integrations.store');
         Route::patch('/settings/integrations/{integration}/toggle', [IntegrationController::class, 'toggle'])->name('integrations.toggle');
         Route::delete('/settings/integrations/{integration}', [IntegrationController::class, 'destroy'])->name('integrations.destroy');
