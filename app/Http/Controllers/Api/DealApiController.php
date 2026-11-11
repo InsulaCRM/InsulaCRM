@@ -12,6 +12,8 @@ use App\Services\BusinessModeService;
 use App\Services\BuyerMatchService;
 use App\Services\DispositionPackageService;
 use App\Services\WebhookService;
+use App\Services\WholesaleClosingReadinessService;
+use App\Models\TransactionChecklist;
 use App\Models\DealBuyerMatch;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
@@ -349,6 +351,93 @@ class DealApiController extends Controller
             'deal' => $deal->fresh(['committedBuyer', 'buyerMatches.buyer']),
             'message' => 'Buyer commitment recorded. Continue through the authorized assignment and closing process.',
         ]);
+    }
+
+    public function closingReadiness(Request $request, int $id)
+    {
+        $tenant = $request->attributes->get('tenant');
+        $deal = Deal::withoutGlobalScopes()->where('tenant_id', $tenant->id)->findOrFail($id);
+
+        if (!BusinessModeService::isWholesale($tenant)) {
+            return response()->json(['error' => 'Closing readiness is only available in wholesale mode.'], 422);
+        }
+
+        return response()->json(app(WholesaleClosingReadinessService::class)->assess($deal));
+    }
+
+    public function markChecklistItem(Request $request, int $id, int $itemId)
+    {
+        $tenant = $request->attributes->get('tenant');
+        $deal = Deal::withoutGlobalScopes()->where('tenant_id', $tenant->id)->findOrFail($id);
+        $item = TransactionChecklist::withoutGlobalScopes()
+            ->where('tenant_id', $tenant->id)
+            ->where('deal_id', $deal->id)
+            ->findOrFail($itemId);
+
+        $validator = Validator::make($request->all(), [
+            'status' => 'required|in:pending,in_progress,completed,waived,failed',
+            'notes' => 'nullable|string|max:5000',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['error' => 'Validation failed.', 'details' => $validator->errors()], 422);
+        }
+
+        $data = $validator->validated();
+        $item->update([
+            'status' => $data['status'],
+            'notes' => $data['notes'] ?? $item->notes,
+            'completed_at' => in_array($data['status'], ['completed', 'waived'], true) ? now() : null,
+        ]);
+
+        return response()->json(['success' => true, 'item' => $item->fresh()]);
+    }
+
+    public function advanceClosing(Request $request, int $id)
+    {
+        $tenant = $request->attributes->get('tenant');
+        $deal = Deal::withoutGlobalScopes()->where('tenant_id', $tenant->id)->findOrFail($id);
+
+        if (!BusinessModeService::isWholesale($tenant)) {
+            return response()->json(['error' => 'Closing advancement is only available in wholesale mode.'], 422);
+        }
+
+        if (!in_array($deal->stage, ['buyer_committed', 'assigned', 'closing'], true)) {
+            return response()->json(['error' => 'Deal must have a committed buyer before closing advancement.'], 422);
+        }
+
+        $readiness = app(WholesaleClosingReadinessService::class)->assess($deal);
+        if (!$readiness['ready']) {
+            return response()->json([
+                'error' => 'Closing readiness gate is not satisfied.',
+                'blockers' => $readiness['blockers'],
+            ], 422);
+        }
+
+        if ($deal->stage !== 'closing') {
+            $oldStage = $deal->stage;
+            $deal->update(['stage' => 'closing', 'stage_changed_at' => now()]);
+            Activity::withoutGlobalScopes()->create([
+                'tenant_id' => $tenant->id,
+                'lead_id' => $deal->lead_id,
+                'agent_id' => $deal->agent_id,
+                'type' => 'stage_change',
+                'subject' => 'Deal advanced to closing',
+                'body' => 'Closing readiness gate passed for deal #' . $deal->id . '.',
+                'logged_at' => now(),
+            ]);
+            event(new DealStageChanged($deal, $oldStage));
+            Hooks::doAction('deal.stage_changed', $deal, $oldStage);
+            WebhookService::dispatch('deal.closing.ready', [
+                'deal_id' => $deal->id,
+                'lead_id' => $deal->lead_id,
+                'buyer_id' => $deal->committed_buyer_id,
+                'transaction_structure' => $deal->transaction_structure,
+                'closing_provider' => $deal->confirmed_closing_provider,
+            ], $tenant->id);
+        }
+
+        return response()->json(['success' => true, 'deal' => $deal->fresh(['committedBuyer'])]);
     }
 
     public function dispositionPackage(Request $request, int $id)
