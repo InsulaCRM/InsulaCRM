@@ -44,11 +44,30 @@ class MotivationScoreService
         $lists = $lead->lists;
         $score += min($lists->count() * 10, 30); // 10 pts per list, cap 30
 
+        $representedListTypes = $lists->pluck('type')->filter()->map(fn ($type) => strtolower((string) $type))->unique()->values()->all();
+
         foreach ($lists as $list) {
-            if (isset($this->listBonuses[$list->type])) {
-                $score += $this->listBonuses[$list->type];
+            $type = strtolower((string) $list->type);
+            if (isset($this->listBonuses[$type])) {
+                $score += $this->listBonuses[$type];
             }
         }
+
+        // External list/data providers can supply list_types during lead ingest.
+        // They are stored in custom_fields so ingestion remains provider-neutral,
+        // but they should still contribute to motivation scoring. Only add a
+        // provider bonus when that signal is not already represented by a real
+        // LeadList record, preventing double-counting.
+        $providerListTypes = data_get($lead->custom_fields, 'list_types', []);
+        if (is_array($providerListTypes)) {
+            foreach ($providerListTypes as $providerType) {
+                $type = strtolower(trim((string) $providerType));
+                if ($type !== '' && !in_array($type, $representedListTypes, true) && isset($this->listBonuses[$type])) {
+                    $score += $this->listBonuses[$type];
+                }
+            }
+        }
+
         $score = min($score, 50); // list section capped at 50
 
         // ── Temperature (max 15 pts) ──
