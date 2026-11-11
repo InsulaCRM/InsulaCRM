@@ -333,7 +333,10 @@ class LeadIngestController extends Controller
                 ->where(function ($query) use ($data, $normalizedPhone) {
                     $query->where('phone', $data['phone']);
                     if ($normalizedPhone !== '') {
-                        $query->orWhereRaw("REGEXP_REPLACE(phone, '[^0-9]', '') = ?", [$normalizedPhone]);
+                        $query->orWhereRaw(
+                            "REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(phone, ' ', ''), '-', ''), '(', ''), ')', ''), '+', '') = ?",
+                            [$normalizedPhone]
+                        );
                     }
                 })
                 ->first();
