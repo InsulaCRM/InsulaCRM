@@ -15,8 +15,8 @@ class BuyerMatchServiceTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->service = new BuyerMatchService();
         $this->actingAsAdmin();
+        $this->service = app(BuyerMatchService::class);
     }
 
     private function setupDealWithProperty(array $propertyAttrs, array $dealAttrs = []): \App\Models\Deal
