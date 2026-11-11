@@ -17,6 +17,7 @@ use App\Services\WholesaleCompletionService;
 use App\Models\TransactionChecklist;
 use App\Models\DealBuyerMatch;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 
 class DealApiController extends Controller
@@ -348,7 +349,7 @@ class DealApiController extends Controller
 
         $data = $validator->validated();
 
-        return IlluminateSupportFacadesDB::transaction(function () use ($tenant, $deal, $data) {
+        return DB::transaction(function () use ($tenant, $deal, $data) {
             $deal = Deal::withoutGlobalScopes()
                 ->where('tenant_id', $tenant->id)
                 ->whereKey($deal->id)
