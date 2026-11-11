@@ -57,3 +57,11 @@ For a property with an estimated ARV of $330,000 and little/no repair requiremen
 It should calculate the buyer economics, compare that result with the 70% benchmark, and expose the assumptions so an acquisitions user can decide whether the lead is worth pursuing.
 
 This is intentionally a screening model. Final pricing requires current comps, inspection/condition information, buyer-specific criteria, and appropriate professional review.
+
+## Opportunity scoring integration
+
+The n8n opportunity scorer now uses the adaptive underwriting result as an additional deal-quality signal. A property is not promoted solely because it has equity or distress. The scorer also checks whether the asking price leaves room under the buyer-economics seller contract ceiling.
+
+The score response includes both the legacy 70% benchmark and the adaptive underwriting object, including buyer purchase ceiling, seller contract ceiling, estimated spread, viability, method, and assumptions. This lets acquisitions users see why a lead is attractive or unattractive rather than hiding the pricing model behind a single percentage.
+
+Scoring version: nc-v2-adaptive-mao.
