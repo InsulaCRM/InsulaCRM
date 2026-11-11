@@ -297,6 +297,7 @@ Route::middleware(['auth', 'tenant', 'require2fa'])->group(function () {
         Route::patch('/pipeline/{deal}', [DealController::class, 'update'])->name('deals.quickUpdate');
         Route::patch('/pipeline/{deal}/stage', [DealController::class, 'updateStage'])->name('deals.updateStage');
         Route::post('/pipeline/{deal}/documents', [DealController::class, 'uploadDocument'])->name('deals.uploadDocument');
+        Route::post('/pipeline/{deal}/signature-requests', [DealController::class, 'sendOpenSign'])->name('deals.sendOpenSign');
         Route::get('/pipeline/documents/{document}/download', [DealController::class, 'downloadDocument'])->name('deals.downloadDocument');
         Route::post('/pipeline/{deal}/notify-buyer/{match}', [DealController::class, 'notifyBuyer'])->name('deals.notifyBuyer');
 
