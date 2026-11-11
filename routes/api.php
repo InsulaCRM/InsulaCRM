@@ -34,6 +34,9 @@ Route::prefix('v1')->middleware(['api.key', 'throttle:api', 'api.log'])->group(f
     Route::put('/deals/{id}', [DealApiController::class, 'update']);
     Route::get('/deals/{id}/disposition-package', [DealApiController::class, 'dispositionPackage']);
     Route::post('/deals/{id}/buyer-commitment', [DealApiController::class, 'commitBuyer']);
+    Route::get('/deals/{id}/closing-readiness', [DealApiController::class, 'closingReadiness']);
+    Route::put('/deals/{id}/checklist/{itemId}', [DealApiController::class, 'markChecklistItem']);
+    Route::post('/deals/{id}/advance-closing', [DealApiController::class, 'advanceClosing']);
 
     // Buyers
     Route::get('/buyers', [BuyerApiController::class, 'index']);
