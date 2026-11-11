@@ -290,6 +290,7 @@ Route::middleware(['auth', 'tenant', 'require2fa'])->group(function () {
         Route::get('/pipeline/intake', [DealController::class, 'intake'])->name('deals.intake');
         Route::get('/pipeline/intake/{lead}', [DealController::class, 'intake'])->name('deals.intake.lead');
         Route::post('/pipeline/intake', [DealController::class, 'storeIntake'])->name('deals.intake.store');
+        Route::post('/pipeline/{deal}/contract-review', [DealController::class, 'contractReview'])->name('deals.contractReview');
         Route::get('/pipeline', [DealController::class, 'pipeline'])->name('pipeline');
         Route::get('/pipeline/{deal}', [DealController::class, 'show'])->name('deals.show');
         Route::put('/pipeline/{deal}', [DealController::class, 'update'])->name('deals.update');
