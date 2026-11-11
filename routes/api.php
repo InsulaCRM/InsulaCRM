@@ -44,6 +44,8 @@ Route::prefix('v1')->middleware(['api.key', 'throttle:api', 'api.log'])->group(f
     Route::get('/deals/{id}/closing-readiness', [DealApiController::class, 'closingReadiness']);
     Route::put('/deals/{id}/checklist/{itemId}', [DealApiController::class, 'markChecklistItem']);
     Route::post('/deals/{id}/advance-closing', [DealApiController::class, 'advanceClosing']);
+    Route::post('/deals/{id}/assignment-complete', [DealApiController::class, 'completeAssignment']);
+    Route::post('/deals/{id}/closing-complete', [DealApiController::class, 'completeClosing']);
 
     // Deal e-signature
     Route::get('/deals/{id}/signature-requests', [DealSignatureController::class, 'index']);
