@@ -1,0 +1,163 @@
+{
+  "name": "NC Wholesale - Disposition Ready & Buyer Package",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "nc-wholesale/disposition-ready",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "p1",
+      "name": "Disposition Ready Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -700,
+        0
+      ],
+      "webhookId": "nc-wholesale-disposition-ready"
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{$env.INSULACRM_API_URL}}/api/v1/deals/{{$json.body?.data?.deal_id || $json.data?.deal_id || $json.body?.deal_id || $json.deal_id}}/disposition-package",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-API-Key",
+              "value": "={{$env.INSULACRM_API_KEY}}"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "id": "p2",
+      "name": "Get Disposition Package",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -420,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const p=$input.first().json||{}; const matches=Array.isArray(p.buyer_matches)?p.buyer_matches:[]; const viable=matches.filter(m=>m.underwriting?.underwriting_pass).sort((a,b)=>(b.match_score-a.match_score)||((b.underwriting?.estimated_spread||-Infinity)-(a.underwriting?.estimated_spread||-Infinity))).slice(0,10); return [{json:{...p,viable_buyer_matches:viable,top_buyer:viable[0]||null,disposition_status:viable.length?'buyer_exit_available':'no_viable_buyer'}}];"
+      },
+      "id": "p3",
+      "name": "Rank Viable Buyers",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -180,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{$env.INSULACRM_API_URL}}/api/v1/activities",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-API-Key",
+              "value": "={{$env.INSULACRM_API_KEY}}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{JSON.stringify({lead_id:$json.lead_id,type:'task',subject:$json.disposition_status==='buyer_exit_available'?'Disposition package ready — viable buyers found':'Disposition review — no viable buyer match',body:($json.disposition_status==='buyer_exit_available'?'Top buyer: '+($json.top_buyer?.buyer_name||'Unknown')+' | Score: '+($json.top_buyer?.match_score||0)+' | Contract ceiling: $'+Number($json.top_buyer?.underwriting?.wholesale_contract_ceiling||0).toLocaleString()+' | Spread: $'+Number($json.top_buyer?.underwriting?.estimated_spread||0).toLocaleString()+' | Buyer matches: '+$json.viable_buyer_matches.length:'No viable buyer currently supports the contract price under stored buy-box economics. Review price, buyer pool, or contract options before outreach.'),logged_at:new Date().toISOString()})}}",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "id": "p4",
+      "name": "Log Disposition Readiness",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        80,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{JSON.stringify({success:true,deal_id:$json.deal_id,disposition_status:$json.disposition_status,buyer_count:$json.viable_buyer_matches.length,top_buyer:$json.top_buyer,message:$json.disposition_status==='buyer_exit_available'?'Disposition package prepared. Buyer outreach remains a separate action.':'No viable buyer match found under current buy-box assumptions.'})}}",
+        "options": {}
+      },
+      "id": "p5",
+      "name": "Respond",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        360,
+        0
+      ]
+    }
+  ],
+  "connections": {
+    "Disposition Ready Webhook": {
+      "main": [
+        [
+          {
+            "node": "Get Disposition Package",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Disposition Package": {
+      "main": [
+        [
+          {
+            "node": "Rank Viable Buyers",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Rank Viable Buyers": {
+      "main": [
+        [
+          {
+            "node": "Log Disposition Readiness",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Log Disposition Readiness": {
+      "main": [
+        [
+          {
+            "node": "Respond",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "saveDataErrorExecution": "all",
+    "saveDataSuccessExecution": "all"
+  },
+  "versionId": "nc-wholesale-disposition-ready-v1",
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "tags": []
+}
