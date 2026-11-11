@@ -27,6 +27,10 @@
                             <form method="POST" action="{{ route('deals.sendOpenSign', $deal) }}">
                                 @csrf
                                 <input type="hidden" name="generated_document_id" value="{{ $document->id }}">
+                                <div class="mb-2">
+                                    <label class="form-label form-label-sm">OpenSign template ID <span class="text-secondary">(optional)</span></label>
+                                    <input type="text" name="opensign_template_id" class="form-control form-control-sm" placeholder="Use an OpenSign template ID when the contract has pre-placed signature fields">
+                                </div>
 
                                 <div class="d-flex flex-wrap gap-3 mb-2">
                                     <label class="form-check">
