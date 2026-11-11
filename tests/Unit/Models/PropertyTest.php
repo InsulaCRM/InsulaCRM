@@ -26,6 +26,7 @@ class PropertyTest extends TestCase
         $property = $this->createProperty([
             'after_repair_value' => 200000,
             'repair_estimate' => 30000,
+            'condition' => 'unknown',
         ]);
 
         // Default wholesale economics for an unknown-condition property:
