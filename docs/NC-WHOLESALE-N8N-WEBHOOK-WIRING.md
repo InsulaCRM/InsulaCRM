@@ -90,3 +90,14 @@ This workflow prepares the disposition package; it does not represent a buyer as
 - `POST /api/v1/deals/{id}/advance-closing` can move a buyer-committed/assigned deal to `closing` only when the readiness gate passes.
 - Successful advancement emits `deal.closing.ready`.
 - `NC-Wholesale-Closing-Ready-Handoff.json` verifies readiness and logs the handoff; it does not fabricate legal documents, alter the closing provider, or declare a closing completed.
+
+
+## OpenSign e-signature completion
+
+- `POST /api/v1/deals/{id}/signature-requests` creates a tenant-scoped OpenSign signature request from a generated PDF after the Contract Protection Gate is approved.
+- OpenSign sends the signing invitation by email and returns signer URLs and an OpenSign object ID.
+- OpenSign sends lifecycle webhooks to `POST /api/v1/webhooks/opensign`. The CRM validates the OpenSign HMAC signature before processing events.
+- A `completed` event downloads the executed PDF and completion certificate into the deal archive and attaches them to the deal's document records.
+- InsulaCRM then emits `deal.contract.executed` for orchestration.
+- Use `integrations/n8n/NC-Wholesale-Contract-Executed-Archive.json` for optional downstream logging/handoff.
+- Do not commit OpenSign API tokens, webhook secrets, signing URLs, or executed contracts.
