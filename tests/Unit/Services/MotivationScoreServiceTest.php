@@ -116,6 +116,36 @@ class MotivationScoreServiceTest extends TestCase
         $this->assertEquals(10, $score);
     }
 
+    public function test_provider_list_type_adds_list_bonus_when_not_already represented(): void
+    {
+        $lead = $this->createLead([
+            'temperature' => 'cold',
+            'custom_fields' => ['list_types' => ['tax_delinquent']],
+        ]);
+
+        $score = $this->service->recalculate($lead);
+
+        $this->assertEquals(20, $score);
+    }
+
+    public function test_provider_list_type_does_not_double_count_real_list(): void
+    {
+        $lead = $this->createLead([
+            'temperature' => 'cold',
+            'custom_fields' => ['list_types' => ['tax_delinquent']],
+        ]);
+
+        $list = \App\Models\LeadList::factory()->create([
+            'tenant_id' => $this->tenant->id,
+            'type' => 'tax_delinquent',
+        ]);
+        $lead->lists()->attach($list->id);
+
+        $score = $this->service->recalculate($lead);
+
+        $this->assertEquals(30, $score);
+    }
+
     public function test_score_capped_at_one_hundred(): void
     {
         $lead = $this->createLead(['temperature' => 'hot']);
