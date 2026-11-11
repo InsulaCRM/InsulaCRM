@@ -39,6 +39,20 @@ class BuyerMatchService
         ->filter(fn($match)=>$match['score']>0 && ($match['underwriting']['status'] ?? null)==='calculated')
         ->sortByDesc('score')->values();
 
+        $matchedBuyerIds = $matches->pluck('buyer.id')->all();
+
+        // A deal can be re-matched after price, ARV, repairs, property, or
+        // buyer buy-box changes. Remove stale matches so disposition never
+        // surfaces a buyer who no longer passes underwriting.
+        $staleMatches = DealBuyerMatch::withoutGlobalScopes()
+            ->where('deal_id', $deal->id);
+
+        if ($matchedBuyerIds) {
+            $staleMatches->whereNotIn('buyer_id', $matchedBuyerIds);
+        }
+
+        $staleMatches->delete();
+
         foreach($matches as $match){
             DealBuyerMatch::updateOrCreate(
                 ['deal_id'=>$deal->id,'buyer_id'=>$match['buyer']->id],
