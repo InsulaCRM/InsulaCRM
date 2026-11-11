@@ -229,6 +229,29 @@ class DealApiController extends Controller
 
         $data = $validator->validated();
 
+        // Protected wholesale lifecycle stages must be reached through their
+        // dedicated state-transition endpoints so contract, buyer, closing,
+        // completion, audit, and webhook gates cannot be bypassed by a
+        // generic deal update.
+        if (!$isRE && isset($data['stage']) && in_array($data['stage'], [
+            'buyer_committed',
+            'assigned',
+            'closing',
+            'closed_won',
+        ], true)) {
+            $endpoint = match ($data['stage']) {
+                'buyer_committed' => 'POST /api/v1/deals/{id}/buyer-commitment',
+                'closing' => 'POST /api/v1/deals/{id}/advance-closing',
+                'assigned' => 'POST /api/v1/deals/{id}/assignment-complete',
+                'closed_won' => 'POST /api/v1/deals/{id}/closing-complete',
+            };
+
+            return response()->json([
+                'error' => 'This wholesale lifecycle stage must be reached through its dedicated workflow endpoint.',
+                'required_endpoint' => $endpoint,
+            ], 422);
+        }
+
         if (($data['stage'] ?? null) === 'under_contract'
             && !$isRE
             && ($data['contract_gate_status'] ?? $deal->contract_gate_status) !== 'approved') {
