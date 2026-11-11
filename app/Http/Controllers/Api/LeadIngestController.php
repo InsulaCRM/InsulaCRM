@@ -274,6 +274,10 @@ class LeadIngestController extends Controller
             ]);
         });
 
+        if ($deal instanceof \\Illuminate\\Http\\JsonResponse) {
+            return $deal;
+        }
+
         if ($deal === null) {
             return response()->json([
                 'error' => 'A property is required before converting this seller lead into a wholesale deal.',
