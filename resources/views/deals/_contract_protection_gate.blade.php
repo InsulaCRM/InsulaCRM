@@ -9,6 +9,38 @@
             {{ \App\Models\Deal::stageLabel($deal->stage) }}
         </span>
     </div>
+    @if($deal->contract_gate_status === 'approved')
+        <div class="alert alert-success">
+            <div class="fw-bold">{{ __('Contract Protection Gate: APPROVED') }}</div>
+            <div>{{ $deal->contract_gate_reason ?: __('All configured contract protection controls passed. The deal is approved for the closing workflow.') }}</div>
+            @if($deal->contract_gate_checked_at)
+                <div class="small text-muted mt-1">{{ __('Checked') }} {{ $deal->contract_gate_checked_at->format('M j, Y g:i A') }}</div>
+            @endif
+        </div>
+    @elseif($deal->contract_gate_status === 'blocked')
+        <div class="alert alert-danger">
+            <div class="fw-bold">{{ __('Contract Protection Gate: BLOCKED') }}</div>
+            <div>{{ $deal->contract_gate_reason ?: __('The contract protection workflow found one or more blockers.') }}</div>
+            @if(!empty($deal->contract_gate_blockers))
+                <ul class="mb-0 mt-2">
+                    @foreach($deal->contract_gate_blockers as $key => $value)
+                        @if(!$value)
+                            <li>{{ IlluminateSupportStr::headline($key) }}: {{ __('Not satisfied') }}</li>
+                        @endif
+                    @endforeach
+                </ul>
+            @endif
+            @if($deal->contract_gate_checked_at)
+                <div class="small text-muted mt-1">{{ __('Checked') }} {{ $deal->contract_gate_checked_at->format('M j, Y g:i A') }}</div>
+            @endif
+        </div>
+    @elseif($deal->contract_gate_status === 'pending')
+        <div class="alert alert-info">
+            <div class="fw-bold">{{ __('Contract Protection Gate: PENDING') }}</div>
+            <div>{{ __('The deal was sent to the configured protection workflow. The final result will appear here after the workflow responds.') }}</div>
+        </div>
+    @endif
+
     <form method="POST" action="{{ route('deals.contractReview', $deal) }}">
         @csrf
         <div class="card-body">
