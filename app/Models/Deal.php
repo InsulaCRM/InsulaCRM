@@ -57,6 +57,8 @@ class Deal extends Model
         'property_county',
         'buyer_type',
         'buyer_legal_name',
+        'committed_buyer_id',
+        'buyer_committed_at',
         'transaction_structure',
         'attorney_approved_template_id',
         'executed_contract_status',
@@ -102,6 +104,7 @@ class Deal extends Model
     {
         return [
             'contract_price' => 'decimal:2',
+            'buyer_committed_at' => 'datetime',
             'assignment_fee' => 'decimal:2',
             'earnest_money' => 'decimal:2',
             'contract_date' => 'date',
@@ -136,6 +139,11 @@ class Deal extends Model
     public function lead()
     {
         return $this->belongsTo(Lead::class);
+    }
+
+    public function committedBuyer()
+    {
+        return $this->belongsTo(Buyer::class, 'committed_buyer_id');
     }
 
     public function agent()
