@@ -272,17 +272,6 @@ class DealApiController extends Controller
             return response()->json(['error' => 'Buyer commitment is only available in wholesale mode.'], 422);
         }
 
-        if (!in_array($deal->stage, ['dispositions', 'buyer_committed'], true)) {
-            return response()->json(['error' => 'Deal must be in dispositions before a buyer can be committed.'], 422);
-        }
-
-        if ($deal->contract_gate_status !== 'approved') {
-            return response()->json([
-                'error' => 'Contract Protection Gate approval is required before committing a buyer.',
-                'contract_gate_status' => $deal->contract_gate_status,
-            ], 422);
-        }
-
         $validator = Validator::make($request->all(), [
             'buyer_id' => 'required|integer',
             'match_id' => 'required|integer',
@@ -297,65 +286,94 @@ class DealApiController extends Controller
 
         $data = $validator->validated();
 
-        $match = DealBuyerMatch::where('id', $data['match_id'])
-            ->where('deal_id', $deal->id)
-            ->where('buyer_id', $data['buyer_id'])
-            ->firstOrFail();
+        return IlluminateSupportFacadesDB::transaction(function () use ($tenant, $deal, $data) {
+            $deal = Deal::withoutGlobalScopes()
+                ->where('tenant_id', $tenant->id)
+                ->whereKey($deal->id)
+                ->lockForUpdate()
+                ->firstOrFail();
 
-        if (!in_array($match->response_intent, ['interested', 'callback'], true)) {
-            return response()->json(['error' => 'Buyer must have an eligible response before commitment.'], 422);
-        }
+            if ($deal->stage !== 'dispositions' && $deal->stage !== 'buyer_committed') {
+                return response()->json(['error' => 'Deal must be in dispositions before a buyer can be committed.'], 422);
+            }
 
-        if ($match->outreach_status === 'stopped' || $match->response_intent === 'opt_out') {
-            return response()->json(['error' => 'This buyer has opted out of outreach.'], 422);
-        }
+            if ($deal->contract_gate_status !== 'approved') {
+                return response()->json([
+                    'error' => 'Contract Protection Gate approval is required before committing a buyer.',
+                    'contract_gate_status' => $deal->contract_gate_status,
+                ], 422);
+            }
 
-        $alreadyCommitted = DealBuyerMatch::where('deal_id', $deal->id)
-            ->where('commitment_status', 'committed')
-            ->where('id', '!=', $match->id)
-            ->exists();
+            $match = DealBuyerMatch::withoutGlobalScopes()
+                ->where('id', $data['match_id'])
+                ->where('deal_id', $deal->id)
+                ->where('buyer_id', $data['buyer_id'])
+                ->firstOrFail();
 
-        if ($alreadyCommitted) {
-            return response()->json(['error' => 'Another buyer is already committed to this deal. Review before replacing the commitment.'], 422);
-        }
+            if (!in_array($match->response_intent, ['interested', 'callback'], true)) {
+                return response()->json(['error' => 'Buyer must have an eligible response before commitment.'], 422);
+            }
 
-        $match->update([
-            'commitment_status' => 'committed',
-            'outreach_status' => 'replied',
-            'responded_at' => $match->responded_at ?: now(),
-        ]);
+            if ($match->outreach_status === 'stopped' || $match->response_intent === 'opt_out') {
+                return response()->json(['error' => 'This buyer has opted out of outreach.'], 422);
+            }
 
-        $deal->update([
-            'committed_buyer_id' => $match->buyer_id,
-            'buyer_committed_at' => now(),
-            'assignment_fee' => array_key_exists('assignment_fee', $data) ? $data['assignment_fee'] : $deal->assignment_fee,
-            'stage' => 'buyer_committed',
-            'stage_changed_at' => now(),
-        ]);
+            if ($deal->committed_buyer_id === $match->buyer_id && $match->commitment_status === 'committed') {
+                return response()->json([
+                    'success' => true,
+                    'deal' => $deal->fresh(['committedBuyer', 'buyerMatches.buyer']),
+                    'message' => 'Buyer commitment is already recorded.',
+                ]);
+            }
 
-        Activity::withoutGlobalScopes()->create([
-            'tenant_id' => $tenant->id,
-            'lead_id' => $deal->lead_id,
-            'agent_id' => $deal->agent_id,
-            'type' => 'stage_change',
-            'subject' => 'Buyer commitment recorded',
-            'body' => 'Buyer #' . $match->buyer_id . ' explicitly confirmed commitment for deal #' . $deal->id . '.',
-            'logged_at' => now(),
-        ]);
+            $alreadyCommitted = DealBuyerMatch::withoutGlobalScopes()
+                ->where('deal_id', $deal->id)
+                ->where('commitment_status', 'committed')
+                ->where('id', '!=', $match->id)
+                ->exists();
 
-        WebhookService::dispatch('deal.buyer.committed', [
-            'deal_id' => $deal->id,
-            'lead_id' => $deal->lead_id,
-            'buyer_id' => $match->buyer_id,
-            'match_id' => $match->id,
-            'stage' => 'buyer_committed',
-        ], $tenant->id);
+            if ($alreadyCommitted) {
+                return response()->json(['error' => 'Another buyer is already committed to this deal. Review before replacing the commitment.'], 422);
+            }
 
-        return response()->json([
-            'success' => true,
-            'deal' => $deal->fresh(['committedBuyer', 'buyerMatches.buyer']),
-            'message' => 'Buyer commitment recorded. Continue through the authorized assignment and closing process.',
-        ]);
+            $match->update([
+                'commitment_status' => 'committed',
+                'outreach_status' => 'replied',
+                'responded_at' => $match->responded_at ?: now(),
+            ]);
+
+            $deal->update([
+                'committed_buyer_id' => $match->buyer_id,
+                'buyer_committed_at' => now(),
+                'assignment_fee' => array_key_exists('assignment_fee', $data) ? $data['assignment_fee'] : $deal->assignment_fee,
+                'stage' => 'buyer_committed',
+                'stage_changed_at' => now(),
+            ]);
+
+            Activity::withoutGlobalScopes()->create([
+                'tenant_id' => $tenant->id,
+                'lead_id' => $deal->lead_id,
+                'agent_id' => $deal->agent_id,
+                'type' => 'stage_change',
+                'subject' => 'Buyer commitment recorded',
+                'body' => 'Buyer #' . $match->buyer_id . ' explicitly confirmed commitment for deal #' . $deal->id . '.',
+                'logged_at' => now(),
+            ]);
+
+            WebhookService::dispatch('deal.buyer.committed', [
+                'deal_id' => $deal->id,
+                'lead_id' => $deal->lead_id,
+                'buyer_id' => $match->buyer_id,
+                'match_id' => $match->id,
+                'stage' => 'buyer_committed',
+            ], $tenant->id);
+
+            return response()->json([
+                'success' => true,
+                'deal' => $deal->fresh(['committedBuyer', 'buyerMatches.buyer']),
+                'message' => 'Buyer commitment recorded. Continue through the authorized assignment and closing process.',
+            ]);
+        });
     }
 
     public function closingReadiness(Request $request, int $id)
