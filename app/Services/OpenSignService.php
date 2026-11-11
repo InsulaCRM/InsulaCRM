@@ -47,6 +47,7 @@ class OpenSignService
             'signers' => $signers,
             'source_pdf_path' => $pdfPath,
             'archive_directory' => 'deals/' . $deal->id . '/executed',
+            'opensign_template_id' => $options['opensign_template_id'] ?? null,
         ]);
 
         $payload = [
@@ -77,7 +78,14 @@ class OpenSignService
             }
         }
 
-        $response = $this->request('POST', '/createdocument', $payload);
+        $templateId = $options['opensign_template_id'] ?? null;
+        $endpoint = $templateId ? '/createdocument/' . rawurlencode($templateId) : '/createdocument';
+
+        if ($templateId) {
+            unset($payload['file']);
+        }
+
+        $response = $this->request('POST', $endpoint, $payload);
         $body = $response->json();
 
         if (!$response->successful() || empty($body['objectId'])) {
