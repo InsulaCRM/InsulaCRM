@@ -518,6 +518,7 @@ class DealController extends Controller
             'generated_document_id' => 'required|integer',
             'include_seller' => 'nullable|boolean',
             'include_buyer' => 'nullable|boolean',
+            'opensign_template_id' => 'nullable|string|max:255',
         ]);
 
         $document = $deal->generatedDocuments()->findOrFail($data['generated_document_id']);
@@ -556,6 +557,7 @@ class DealController extends Controller
                     'document_type' => 'wholesale_contract',
                     'enable_otp' => true,
                     'send_in_order' => count($signers) > 1,
+                    'opensign_template_id' => $data['opensign_template_id'] ?? null,
                 ]
             );
         } catch (\RuntimeException $e) {
