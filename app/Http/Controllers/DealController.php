@@ -16,6 +16,7 @@ use App\Models\User;
 use App\Notifications\BuyerMatchFound;
 use App\Notifications\DealStageChanged as DealStageChangedNotification;
 use App\Services\BuyerScoreService;
+use App\Services\OpenSignService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Storage;
@@ -472,7 +473,7 @@ class DealController extends Controller
     public function show(Deal $deal)
     {
         $this->authorize('view', $deal);
-        $deal->load(['lead.property', 'agent', 'documents', 'buyerMatches.buyer', 'activities.agent']);
+        $deal->load(['lead.property', 'agent', 'documents', 'generatedDocuments', 'signatureRequests', 'buyerMatches.buyer', 'activities.agent']);
 
         if (\App\Services\BusinessModeService::isRealEstate()) {
             $deal->load(['offers', 'checklistItems']);
@@ -499,6 +500,69 @@ class DealController extends Controller
         }
 
         return response()->json(['success' => true, 'deal' => $deal->fresh()]);
+    }
+
+    public function sendOpenSign(Request $request, Deal $deal, OpenSignService $service)
+    {
+        $this->authorize('update', $deal);
+
+        if (!\App\Services\BusinessModeService::isWholesale()) {
+            return back()->withErrors(['signature' => __('OpenSign contract sending is currently enabled for wholesale deals.')]);
+        }
+
+        if ($deal->contract_gate_status !== 'approved') {
+            return back()->withErrors(['signature' => __('The Contract Protection Gate must be approved before sending a document for signature.')]);
+        }
+
+        $data = $request->validate([
+            'generated_document_id' => 'required|integer',
+            'include_seller' => 'nullable|boolean',
+            'include_buyer' => 'nullable|boolean',
+        ]);
+
+        $document = $deal->generatedDocuments()->findOrFail($data['generated_document_id']);
+        $signers = [];
+
+        if (($data['include_seller'] ?? false) && $deal->lead?->email) {
+            $signers[] = [
+                'role' => 'seller',
+                'name' => $deal->lead->full_name,
+                'email' => $deal->lead->email,
+                'phone' => $deal->lead->phone,
+            ];
+        }
+
+        if (($data['include_buyer'] ?? false) && $deal->committedBuyer?->email) {
+            $signers[] = [
+                'role' => 'buyer',
+                'name' => $deal->committedBuyer->full_name,
+                'email' => $deal->committedBuyer->email,
+                'phone' => $deal->committedBuyer->phone,
+            ];
+        }
+
+        if (count($signers) === 0) {
+            return back()->withErrors(['signature' => __('Select at least one signer with a valid email address.')]);
+        }
+
+        try {
+            $service->createSignatureRequest(
+                $deal,
+                $document,
+                $signers,
+                [],
+                [
+                    'title' => $document->name,
+                    'document_type' => 'wholesale_contract',
+                    'enable_otp' => true,
+                    'send_in_order' => count($signers) > 1,
+                ]
+            );
+        } catch (\RuntimeException $e) {
+            return back()->withErrors(['signature' => $e->getMessage()]);
+        }
+
+        return back()->with('success', __('Signature request sent through OpenSign.'));
     }
 
     public function uploadDocument(Request $request, Deal $deal)
