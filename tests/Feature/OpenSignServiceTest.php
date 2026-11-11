@@ -75,6 +75,62 @@ class OpenSignServiceTest extends TestCase
         });
     }
 
+    public function test_tenant_default_template_is_used_for_assignment_documents(): void
+    {
+        $this->actingAsAdmin([
+            'custom_options' => [
+                'opensign' => [
+                    'api_token' => encrypt('tenant-token'),
+                    'base_url' => 'https://sandbox.opensignlabs.com/api/v1.2',
+                    'template_ids' => [
+                        'assignment' => 'tpl-assignment',
+                    ],
+                ],
+            ],
+        ]);
+
+        Storage::fake('local');
+        Storage::disk('local')->put('contracts/assignment.pdf', '%PDF-test');
+
+        $deal = $this->createDeal([
+            'stage' => 'dispositions',
+            'contract_gate_status' => 'approved',
+        ]);
+
+        $document = GeneratedDocument::create([
+            'tenant_id' => $this->tenant->id,
+            'deal_id' => $deal->id,
+            'name' => 'Assignment Agreement',
+            'content' => 'test',
+            'pdf_path' => 'contracts/assignment.pdf',
+        ]);
+
+        Http::fake([
+            'https://sandbox.opensignlabs.com/api/v1.2/createdocument/tpl-assignment' => Http::response([
+                'objectId' => 'opensign-template-123',
+                'signurl' => ['https://sandbox.opensignlabs.com/sign/template'],
+            ], 200),
+        ]);
+
+        app(OpenSignService::class)->createSignatureRequest(
+            $deal,
+            $document,
+            [[
+                'name' => 'Seller',
+                'email' => 'seller@example.com',
+                'role' => 'seller',
+            ]],
+            [],
+            ['document_type' => 'assignment']
+        );
+
+        Http::assertSent(function ($request) {
+            return $request->url() === 'https://sandbox.opensignlabs.com/api/v1.2/createdocument/tpl-assignment'
+                && $request->hasHeader('x-api-token', 'tenant-token')
+                && !isset($request['file']);
+        });
+    }
+
     public function test_completed_webhook_archives_signed_document_and_certificate(): void
     {
         $this->actingAsAdmin();
