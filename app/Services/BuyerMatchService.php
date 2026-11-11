@@ -11,6 +11,25 @@ class BuyerMatchService
 {
     public function __construct(private BuyerBuyBoxService $buyBox) {}
 
+    public function rematchForProperty($property): int
+    {
+        if (BusinessModeService::isRealEstate()) {
+            return 0;
+        }
+
+        $deals = Deal::withoutGlobalScopes()
+            ->where('tenant_id', $property->tenant_id)
+            ->where('property_id', $property->id)
+            ->where('stage', 'dispositions')
+            ->get();
+
+        foreach ($deals as $deal) {
+            $this->matchForDeal($deal);
+        }
+
+        return $deals->count();
+    }
+
     public function matchForDeal(Deal $deal): Collection
     {
         $lead=$deal->lead;
