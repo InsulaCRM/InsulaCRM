@@ -102,6 +102,10 @@ class SettingsController extends Controller
             'opensign_webhook_secret' => 'nullable|string|max:500',
             'opensign_sender_name' => 'required|string|max:255',
             'opensign_sender_email' => 'required|email|max:255',
+            'opensign_template_purchase_agreement' => 'nullable|string|max:255',
+            'opensign_template_assignment' => 'nullable|string|max:255',
+            'opensign_template_double_close' => 'nullable|string|max:255',
+            'opensign_template_novation' => 'nullable|string|max:255',
         ]);
 
         $tenant = auth()->user()->tenant;
@@ -111,6 +115,12 @@ class SettingsController extends Controller
         $current['base_url'] = rtrim($request->string('opensign_base_url')->toString(), '/');
         $current['sender_name'] = $request->string('opensign_sender_name')->toString();
         $current['sender_email'] = $request->string('opensign_sender_email')->toString();
+        $current['template_ids'] = [
+            'purchase_agreement' => $request->string('opensign_template_purchase_agreement')->toString(),
+            'assignment' => $request->string('opensign_template_assignment')->toString(),
+            'double_close' => $request->string('opensign_template_double_close')->toString(),
+            'novation' => $request->string('opensign_template_novation')->toString(),
+        ];
 
         if ($request->filled('opensign_api_token')) {
             $current['api_token'] = encrypt($request->string('opensign_api_token')->toString());
