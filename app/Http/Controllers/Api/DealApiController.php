@@ -130,6 +130,20 @@ class DealApiController extends Controller
         $data['stage'] = $data['stage'] ?? \App\Services\BusinessModeService::getDefaultStage();
         $data['stage_changed_at'] = now();
 
+        // Prevent multiple active deals for the same lead while preserving
+        // closed deal history.
+        $activeDealExists = Deal::withoutGlobalScopes()
+            ->where('tenant_id', $tenant->id)
+            ->where('lead_id', $data['lead_id'])
+            ->whereNotIn('stage', ['closed_won', 'closed_lost'])
+            ->exists();
+
+        if ($activeDealExists) {
+            return response()->json([
+                'error' => 'An active deal already exists for this lead. Close or otherwise resolve the existing deal before creating another.',
+            ], 409);
+        }
+
         // Verify lead belongs to tenant
         $lead = \App\Models\Lead::withoutGlobalScopes()
             ->where('tenant_id', $tenant->id)
