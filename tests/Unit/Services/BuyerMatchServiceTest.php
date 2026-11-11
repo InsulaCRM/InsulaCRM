@@ -89,7 +89,7 @@ class BuyerMatchServiceTest extends TestCase
         $this->assertEquals(20, $matches->first()['score']);
     }
 
-    public function test_perfect_match_scores_ninety(): void
+    public function test_perfect_match_scores_eighty(): void
     {
         $deal = $this->setupDealWithProperty(
             ['zip_code' => '33101', 'property_type' => 'single_family', 'state' => 'FL', 'after_repair_value' => 300000, 'repair_estimate' => 0],
@@ -173,7 +173,7 @@ class BuyerMatchServiceTest extends TestCase
             'preferred_zip_codes' => ['33101'],
             'preferred_property_types' => ['commercial'],
             'preferred_states' => ['TX'],
-            'max_purchase_price' => 100000,
+            'max_purchase_price' => 200000,
         ]);
 
         $matches = $this->service->matchForDeal($deal);
