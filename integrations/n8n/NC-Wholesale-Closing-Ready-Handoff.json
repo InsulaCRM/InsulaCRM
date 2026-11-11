@@ -1,0 +1,223 @@
+{
+  "name": "NC Wholesale - Closing Ready Handoff",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "nc-wholesale/closing-ready",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "x1",
+      "name": "Closing Ready Trigger",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -700,
+        0
+      ],
+      "webhookId": "nc-wholesale-closing-ready"
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{$env.INSULACRM_API_URL}}/api/v1/deals/{{$json.body?.data?.deal_id || $json.body?.deal_id || $json.deal_id}}/closing-readiness",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-API-Key",
+              "value": "={{$env.INSULACRM_API_KEY}}"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "id": "x2",
+      "name": "Verify Closing Readiness",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -460,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "leftValue": "={{$json.ready}}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "x3",
+      "name": "Ready?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        -220,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const b=$input.first().json; return [{json:{...b,action:'closing_handoff_ready',note:'Closing readiness passed. Proceed only through the confirmed closing provider and authorized transaction documents.'}}];"
+      },
+      "id": "x4",
+      "name": "Prepare Handoff",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        20,
+        -80
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{$env.INSULACRM_API_URL}}/api/v1/activities",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-API-Key",
+              "value": "={{$env.INSULACRM_API_KEY}}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{JSON.stringify({lead_id:$json.lead_id||0,type:'task',subject:'Wholesale closing readiness passed',body:'Deal '+($json.deal_id||'')+' passed the closing readiness gate. Confirm closing provider and authorized transaction documents before closing.',logged_at:new Date().toISOString()})}}",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "id": "x5",
+      "name": "Log Handoff",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        260,
+        -80
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{JSON.stringify({success:true,message:'Closing readiness verified.',readiness:$json})}}",
+        "options": {}
+      },
+      "id": "x6",
+      "name": "Respond Ready",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        500,
+        -80
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{JSON.stringify({success:false,message:'Closing readiness is blocked.',blockers:$json.blockers||[]})}}",
+        "options": {}
+      },
+      "id": "x7",
+      "name": "Respond Blocked",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        20,
+        140
+      ]
+    }
+  ],
+  "connections": {
+    "Closing Ready Trigger": {
+      "main": [
+        [
+          {
+            "node": "Verify Closing Readiness",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Verify Closing Readiness": {
+      "main": [
+        [
+          {
+            "node": "Ready?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ready?": {
+      "main": [
+        [
+          {
+            "node": "Prepare Handoff",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respond Blocked",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Handoff": {
+      "main": [
+        [
+          {
+            "node": "Log Handoff",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Log Handoff": {
+      "main": [
+        [
+          {
+            "node": "Respond Ready",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "closing-ready-v1"
+}
