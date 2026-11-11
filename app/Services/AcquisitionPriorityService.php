@@ -55,7 +55,7 @@ class AcquisitionPriorityService
             }
 
             // Condition and repair burden increase acquisition priority.
-            $score += match (strtolower((string) $property->condition) {
+            $score += match (strtolower((string) $property->condition)) {
                 'gut_rehab', 'heavy_rehab', 'poor' => 12,
                 'moderate_rehab', 'fair' => 7,
                 'light_rehab' => 4,
