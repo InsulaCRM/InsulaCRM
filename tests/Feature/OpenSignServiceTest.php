@@ -131,6 +131,56 @@ class OpenSignServiceTest extends TestCase
         ]);
     }
 
+
+    public function test_completed_webhook_retry_does_not_duplicate_a_document_when_the_first_archive_was_partial(): void
+    {
+        $this->actingAsAdmin();
+
+        Storage::fake('local');
+
+        $deal = $this->createDeal([
+            'stage' => 'dispositions',
+            'contract_gate_status' => 'approved',
+        ]);
+
+        \App\Models\DealSignatureRequest::create([
+            'tenant_id' => $this->tenant->id,
+            'deal_id' => $deal->id,
+            'document_type' => 'wholesale_contract',
+            'title' => 'Purchase Agreement',
+            'status' => 'sent',
+            'opensign_object_id' => 'opensign-partial-123',
+            'archive_directory' => 'deals/' . $deal->id . '/executed',
+        ]);
+
+        Http::fake([
+            'https://signed.example.com/executed.pdf' => Http::response('%PDF-signed', 200),
+            'https://signed.example.com/certificate.pdf' => Http::sequence()
+                ->pushStatus(500)
+                ->push('%PDF-cert', 200),
+        ]);
+
+        $payload = [
+            'objectId' => 'opensign-partial-123',
+            'event' => 'completed',
+            'file' => 'https://signed.example.com/executed.pdf',
+            'certificate' => 'https://signed.example.com/certificate.pdf',
+        ];
+
+        app(OpenSignService::class)->handleWebhook($payload);
+        app(OpenSignService::class)->handleWebhook($payload);
+
+        $this->assertDatabaseCount('deal_documents', 2);
+        $this->assertDatabaseHas('deal_documents', [
+            'deal_id' => $deal->id,
+            'filename' => 'Purchase-Agreement-executed.pdf',
+        ]);
+        $this->assertDatabaseHas('deal_documents', [
+            'deal_id' => $deal->id,
+            'filename' => 'Purchase-Agreement-completion-certificate.pdf',
+        ]);
+    }
+
     public function test_completed_webhook_does_not_archive_the_same_request_twice(): void
     {
         $this->actingAsAdmin();
