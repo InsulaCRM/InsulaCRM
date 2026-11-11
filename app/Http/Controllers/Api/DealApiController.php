@@ -27,7 +27,7 @@ class DealApiController extends Controller
 
         $query = Deal::withoutGlobalScopes()
             ->where('tenant_id', $tenant->id)
-            ->with(['lead', 'agent']);
+            ->with(['lead.property', 'property', 'agent']);
 
         if ($request->filled('stage')) {
             $query->where('stage', $request->stage);
@@ -66,6 +66,7 @@ class DealApiController extends Controller
 
         $rules = [
             'lead_id'              => 'required|integer',
+            'property_id'          => 'nullable|integer',
             'agent_id'             => 'nullable|integer',
             'title'                => 'nullable|string|max:255',
             'stage'                => 'nullable|in:' . implode(',', array_keys(Deal::stages())),
@@ -148,6 +149,18 @@ class DealApiController extends Controller
         $lead = \App\Models\Lead::withoutGlobalScopes()
             ->where('tenant_id', $tenant->id)
             ->findOrFail($data['lead_id']);
+
+        if (isset($data['property_id'])) {
+            $property = \App\Models\Property::withoutGlobalScopes()
+                ->where('tenant_id', $tenant->id)
+                ->where('lead_id', $lead->id)
+                ->findOrFail($data['property_id']);
+        } else {
+            $property = $lead->property()->first();
+            if ($property) {
+                $data['property_id'] = $property->id;
+            }
+        }
 
         if (empty($data['title'])) {
             $data['title'] = $lead->full_name . ' Deal';
