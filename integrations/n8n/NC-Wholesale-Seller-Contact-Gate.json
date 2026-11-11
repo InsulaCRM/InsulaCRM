@@ -1,0 +1,55 @@
+{
+  "name": "NC Wholesale - Seller Contact Gate",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "nc-wholesale/seller-contact-gate",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "webhook-trigger",
+      "name": "Seller Contact Request",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [0, 0],
+      "webhookId": "nc-wholesale-seller-contact-gate"
+    },
+    {
+      "parameters": {
+        "jsCode": "const body = $json.body || $json;\nconst phone = String(body.phone || '').trim();\nconst dnc = Boolean(body.do_not_contact);\nconst status = String(body.status || '').toLowerCase();\nconst timezone = String(body.timezone || 'America/New_York');\nconst blockedStatuses = new Set(['closed','dead','dnc','do_not_contact','stop','unresponsive_closed']);\nlet localHour = null;\nlet localTime = null;\ntry { const now = $now.setZone(timezone); localHour = now.hour; localTime = now.toISO(); } catch (e) { localHour = null; }\nconst reasons = [];\nif (!phone) reasons.push('missing_phone');\nif (dnc) reasons.push('do_not_contact');\nif (blockedStatuses.has(status)) reasons.push('blocked_status');\nif (localHour === null) reasons.push('invalid_timezone');\nelse if (localHour < 8 || localHour >= 21) reasons.push('outside_8am_9pm_local_window');\nreturn [{ json: { allowed_to_contact: reasons.length === 0, reasons, phone, timezone, local_time: localTime, local_hour: localHour, operational_window: '08:00-21:00 local', compliance_note: 'Operational gate only; verify applicable federal/state consent and DNC requirements before outbound messaging.' } }];"
+      },
+      "id": "gate",
+      "name": "Evaluate Contact Gate",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [300, 0]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify($json) }}",
+        "options": {}
+      },
+      "id": "response",
+      "name": "Return Gate Result",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [600, 0]
+    }
+  ],
+  "connections": {
+    "Seller Contact Request": {
+      "main": [[{"node": "Evaluate Contact Gate", "type": "main", "index": 0}]]
+    },
+    "Evaluate Contact Gate": {
+      "main": [[{"node": "Return Gate Result", "type": "main", "index": 0}]]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "saveDataErrorExecution": "all",
+    "saveDataSuccessExecution": "all"
+  },
+  "active": false
+}
