@@ -3,6 +3,7 @@
 namespace Tests\Unit\Services;
 
 use App\Models\Activity;
+use App\Models\LeadList;
 use App\Models\Property;
 use App\Services\MotivationScoreService;
 use Tests\TestCase;
@@ -135,9 +136,11 @@ class MotivationScoreServiceTest extends TestCase
             'custom_fields' => ['list_types' => ['tax_delinquent']],
         ]);
 
-        $list = \App\Models\LeadList::factory()->create([
+        $list = LeadList::create([
             'tenant_id' => $this->tenant->id,
+            'name' => 'Tax Delinquent',
             'type' => 'tax_delinquent',
+            'record_count' => 1,
         ]);
         $lead->lists()->attach($list->id);
 
