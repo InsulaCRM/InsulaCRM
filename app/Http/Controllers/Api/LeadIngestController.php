@@ -227,41 +227,61 @@ class LeadIngestController extends Controller
             ->with('property')
             ->findOrFail($id);
 
-        $activeDeal = Deal::withoutGlobalScopes()
-            ->where('tenant_id', $tenant->id)
-            ->where('lead_id', $lead->id)
-            ->whereNotIn('stage', ['closed_won', 'closed_lost'])
-            ->first();
+        $requestedStage = $request->input('stage', 'prospecting');
 
-        if ($activeDeal) {
+        if (!in_array($requestedStage, ['prospecting', 'contacting', 'engaging', 'offer_presented'], true)) {
             return response()->json([
-                'success' => true,
-                'already_exists' => true,
-                'deal_id' => $activeDeal->id,
-                'property_id' => $activeDeal->property_id,
-            ], 200);
-        }
-
-        if (!$lead->property) {
-            return response()->json([
-                'error' => 'A property is required before converting this seller lead into a wholesale deal.',
+                'error' => 'Lead conversion may only create an initial acquisition-stage deal.',
+                'allowed_stages' => ['prospecting', 'contacting', 'engaging', 'offer_presented'],
             ], 422);
         }
 
-        $deal = DB::transaction(function () use ($tenant, $lead, $request) {
+        $deal = DB::transaction(function () use ($tenant, $lead, $request, $requestedStage) {
+            // Serialize conversion attempts for this seller so two concurrent
+            // requests cannot both pass the active-deal check.
+            $lockedLead = Lead::withoutGlobalScopes()
+                ->where('tenant_id', $tenant->id)
+                ->whereKey($lead->id)
+                ->lockForUpdate()
+                ->with('property')
+                ->firstOrFail();
+
+            $activeDeal = Deal::withoutGlobalScopes()
+                ->where('tenant_id', $tenant->id)
+                ->where('lead_id', $lockedLead->id)
+                ->whereNotIn('stage', ['closed_won', 'closed_lost'])
+                ->first();
+
+            if ($activeDeal) {
+                return $activeDeal;
+            }
+
+            if (!$lockedLead->property) {
+                throw new \RuntimeException('A property is required before converting this seller lead into a wholesale deal.');
+            }
+
             return Deal::withoutGlobalScopes()->create([
                 'tenant_id' => $tenant->id,
-                'lead_id' => $lead->id,
-                'property_id' => $lead->property->id,
-                'agent_id' => $lead->agent_id,
-                'title' => $request->input('title', $lead->full_name . ' Deal'),
-                'stage' => $request->input('stage', 'prospecting'),
+                'lead_id' => $lockedLead->id,
+                'property_id' => $lockedLead->property->id,
+                'agent_id' => $lockedLead->agent_id,
+                'title' => $request->input('title', $lockedLead->full_name . ' Deal'),
+                'stage' => $requestedStage,
                 'contract_price' => $request->input('contract_price'),
                 'contract_date' => $request->input('contract_date'),
                 'notes' => $request->input('notes'),
                 'stage_changed_at' => now(),
             ]);
         });
+
+        if ($deal->wasRecentlyCreated === false) {
+            return response()->json([
+                'success' => true,
+                'already_exists' => true,
+                'deal_id' => $deal->id,
+                'property_id' => $deal->property_id,
+            ], 200);
+        }
 
         AuditLog::log('lead.converted_to_deal_via_api', $deal);
 
