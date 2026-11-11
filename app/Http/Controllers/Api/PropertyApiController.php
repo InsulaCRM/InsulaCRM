@@ -232,6 +232,13 @@ class PropertyApiController extends Controller
 
         $property->update($data);
 
+        // Property economics (ARV, repairs, condition, strategy, etc.) can
+        // change buyer underwriting after a deal is already in dispositions.
+        // Re-run matching immediately so the disposition package stays current.
+        if (!\App\Services\BusinessModeService::isRealEstate($tenant)) {
+            app(\App\Services\BuyerMatchService::class)->rematchForProperty($property->fresh());
+        }
+
         return response()->json(['success' => true, 'property' => $property->fresh()]);
     }
 }
