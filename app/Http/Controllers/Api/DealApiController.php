@@ -10,6 +10,8 @@ use App\Events\DealStageChanged;
 use App\Facades\Hooks;
 use App\Services\BusinessModeService;
 use App\Services\BuyerMatchService;
+use App\Services\DispositionPackageService;
+use App\Services\WebhookService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 
@@ -235,12 +237,32 @@ class DealApiController extends Controller
 
             if ($data['stage'] === \App\Services\BusinessModeService::getBuyerMatchTriggerStage()) {
                 app(BuyerMatchService::class)->matchForDeal($deal);
+                if (!$isRE && $data['stage'] === 'dispositions') {
+                    WebhookService::dispatch('deal.disposition.ready', [
+                        'deal_id' => $deal->id,
+                        'lead_id' => $deal->lead_id,
+                        'stage' => $deal->stage,
+                    ], $tenant->id);
+                }
             }
         } else {
             $deal->update($data);
         }
 
         return response()->json(['success' => true, 'deal' => $deal->fresh()]);
+    }
+
+    public function dispositionPackage(Request $request, int $id)
+    {
+        $tenant = $request->attributes->get('tenant');
+
+        $deal = Deal::withoutGlobalScopes()
+            ->where('tenant_id', $tenant->id)
+            ->findOrFail($id);
+
+        return response()->json(
+            app(DispositionPackageService::class)->build($deal)
+        );
     }
 
     /**
