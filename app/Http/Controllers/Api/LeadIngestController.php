@@ -44,6 +44,7 @@ class LeadIngestController extends Controller
             // Optional property fields
             'property_address' => 'nullable|string|max:255',
             'property_city'    => 'nullable|string|max:100',
+            'property_county'  => 'nullable|string|max:100',
             'property_state'   => 'nullable|string|max:2',
             'property_zip'     => 'nullable|string|max:10',
             'property_type'    => 'nullable|string|max:100',
@@ -147,6 +148,7 @@ class LeadIngestController extends Controller
                 'lead_id'   => $lead->id,
                 'address'   => $data['property_address'],
                 'city'      => $data['property_city'] ?? null,
+                'county'    => $data['property_county'] ?? null,
                 'state'     => $data['property_state'] ?? null,
                 'zip_code'  => $data['property_zip'] ?? null,
                 'property_type' => $this->resolvePropertyType($data['property_type'] ?? null, $tenant),
