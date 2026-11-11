@@ -94,6 +94,98 @@ class SettingsController extends Controller
         return redirect()->route('settings.index', ['tab' => 'general'])->with('success', 'Settings updated.');
     }
 
+    public function updateOpenSign(Request $request)
+    {
+        $request->validate([
+            'opensign_base_url' => 'required|url|max:500',
+            'opensign_api_token' => 'nullable|string|max:500',
+            'opensign_webhook_secret' => 'nullable|string|max:500',
+            'opensign_sender_name' => 'required|string|max:255',
+            'opensign_sender_email' => 'required|email|max:255',
+        ]);
+
+        $tenant = auth()->user()->tenant;
+        $options = $tenant->custom_options ?? [];
+        $current = $options['opensign'] ?? [];
+
+        $current['base_url'] = rtrim($request->string('opensign_base_url')->toString(), '/');
+        $current['sender_name'] = $request->string('opensign_sender_name')->toString();
+        $current['sender_email'] = $request->string('opensign_sender_email')->toString();
+
+        if ($request->filled('opensign_api_token')) {
+            $current['api_token'] = encrypt($request->string('opensign_api_token')->toString());
+        }
+
+        if ($request->filled('opensign_webhook_secret')) {
+            $current['webhook_secret'] = encrypt($request->string('opensign_webhook_secret')->toString());
+        }
+
+        $options['opensign'] = $current;
+        $tenant->update(['custom_options' => $options]);
+
+        AuditLog::log('settings.opensign_updated', $tenant, [
+            'base_url' => $current['base_url'],
+            'sender_email' => $current['sender_email'],
+            'api_token_updated' => $request->filled('opensign_api_token'),
+            'webhook_secret_updated' => $request->filled('opensign_webhook_secret'),
+        ]);
+
+        return redirect()->route('settings.index', ['tab' => 'integrations'])
+            ->with('success', __('OpenSign settings updated.'));
+    }
+
+    public function testOpenSignConnection(Request $request)
+    {
+        $tenant = auth()->user()->tenant;
+        $options = $tenant->custom_options ?? [];
+        $opensign = $options['opensign'] ?? [];
+
+        $token = $request->filled('opensign_api_token')
+            ? $request->string('opensign_api_token')->toString()
+            : ($opensign['api_token'] ?? null);
+
+        if ($token) {
+            try {
+                $token = decrypt($token);
+            } catch (\Throwable $e) {
+                // Plain text is accepted for backward-compatible tenant settings.
+            }
+        }
+
+        if (!$token) {
+            return response()->json([
+                'success' => false,
+                'message' => __('OpenSign API token is not configured.'),
+            ], 422);
+        }
+
+        $baseUrl = rtrim($request->string('opensign_base_url')->toString() ?: ($opensign['base_url'] ?? config('services.opensign.base_url')), '/');
+
+        try {
+            $response = \Illuminate\Support\Facades\Http::acceptJson()
+                ->withHeaders(['x-api-token' => $token])
+                ->timeout(15)
+                ->get($baseUrl . '/account');
+
+            if ($response->successful()) {
+                return response()->json([
+                    'success' => true,
+                    'message' => __('OpenSign connection successful.'),
+                ]);
+            }
+
+            return response()->json([
+                'success' => false,
+                'message' => __('OpenSign returned HTTP :status. Check the API URL and token.', ['status' => $response->status()]),
+            ], 422);
+        } catch (\Throwable $e) {
+            return response()->json([
+                'success' => false,
+                'message' => __('Could not reach OpenSign. Check the API URL and deployment network access.'),
+            ], 422);
+        }
+    }
+
     public function updateStorage(Request $request)
     {
         $request->validate([
