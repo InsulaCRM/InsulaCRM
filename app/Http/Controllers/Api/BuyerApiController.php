@@ -89,7 +89,7 @@ class BuyerApiController extends Controller
 
         $validator = Validator::make($request->all(), [
             'response_intent' => 'nullable|in:interested,question,not_interested,opt_out,wrong_number,callback',
-            'commitment_status' => 'nullable|in:none,interested,reviewing,committed,declined',
+            'commitment_status' => 'nullable|in:none,interested,reviewing,declined',
             'response_body' => 'nullable|string|max:10000',
             'outreach_status' => 'nullable|in:queued,sent,delivered,replied,failed,stopped',
         ]);
@@ -103,6 +103,16 @@ class BuyerApiController extends Controller
         if (($data['response_intent'] ?? null) === 'opt_out') {
             $data['commitment_status'] = 'declined';
             $data['outreach_status'] = 'stopped';
+        }
+
+        // Buyer commitment is a deal-level state transition and must go
+        // through DealApiController::commitBuyer so the contract gate,
+        // eligible response, single-buyer rule, and audit/webhook flow
+        // cannot be bypassed by editing a match directly.
+        if (($data['commitment_status'] ?? null) === 'committed') {
+            return response()->json([
+                'error' => 'Buyer commitment must be recorded through the deal buyer-commitment endpoint.',
+            ], 422);
         }
 
         if (array_key_exists('response_body', $data)) {
