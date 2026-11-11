@@ -8,6 +8,7 @@
 - INSULACRM_API_URL — base URL for the InsulaCRM deployment, without a trailing slash.
 - INSULACRM_API_KEY — tenant API key used by the InsulaCRM X-API-Key middleware.
 - SELLER_SMS_WEBHOOK_URL — provider adapter endpoint that accepts {to,message,lead_id,source}. Keep provider credentials inside the provider/n8n credential system; do not commit secrets.
+- NC_WHOLESALE_READINESS_WEBHOOK_URL — n8n webhook URL for the seller appointment/offer readiness workflow.
 
 ## Inbound payload
 POST `nc-wholesale/seller-response` with:
