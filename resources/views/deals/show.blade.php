@@ -41,6 +41,8 @@
         </div>
         @endif
 
+        @include('deals._contract_protection_gate')
+
         <!-- Deal Info Card -->
         <div class="card mb-3">
             <div class="card-header">
