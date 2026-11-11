@@ -32,6 +32,7 @@ Route::prefix('v1')->middleware(['api.key', 'throttle:api', 'api.log'])->group(f
     Route::post('/leads', [LeadIngestController::class, 'store']);
     Route::get('/leads/{id}', [LeadIngestController::class, 'show']);
     Route::put('/leads/{id}', [LeadIngestController::class, 'update']);
+    Route::post('/leads/{id}/convert-to-deal', [LeadIngestController::class, 'convertToDeal']);
 
     // Deals
     Route::get('/deals', [DealApiController::class, 'index']);
