@@ -22,43 +22,35 @@ class AcquisitionPriorityService
         $reasons = [];
         $property = $lead->property;
 
+        // A distress signal may arrive from both provider list records and
+        // property markers. Count each signal type once so duplicated source
+        // representations do not artificially inflate acquisition priority.
+        $seenSignals = [];
+
         // Distress/list signals: strongest early acquisition indicators.
         foreach ($lead->lists as $list) {
-            $points = match ($list->type) {
-                'pre_foreclosure' => 18,
-                'tax_delinquent' => 16,
-                'probate' => 14,
-                'code_violation' => 12,
-                'vacant' => 12,
-                'absentee_owner' => 10,
-                'high_equity' => 10,
-                'tired_landlord' => 10,
-                'vacant_land' => 8,
-                default => 3,
-            };
+            $signal = $this->normalizeSignal($list->type);
+            if ($signal === '' || isset($seenSignals[$signal])) {
+                continue;
+            }
+
+            $seenSignals[$signal] = true;
+            $points = $this->signalPoints($signal);
 
             $score += $points;
-            $reasons[] = $this->label($list->type);
+            $reasons[] = $this->label($signal);
         }
 
         if ($property) {
             $markers = $this->normalizedMarkers($property);
 
             foreach ($markers as $marker) {
-                $points = match ($marker) {
-                    'pre_foreclosure' => 18,
-                    'tax_delinquent' => 16,
-                    'probate' => 14,
-                    'code_violation' => 12,
-                    'vacant' => 12,
-                    'absentee_owner' => 10,
-                    'high_equity' => 10,
-                    'tired_landlord' => 10,
-                    'vacant_land' => 8,
-                    default => 3,
-                };
+                if (isset($seenSignals[$marker])) {
+                    continue;
+                }
 
-                $score += $points;
+                $seenSignals[$marker] = true;
+                $score += $this->signalPoints($marker);
                 $reasons[] = $this->label($marker);
             }
 
@@ -129,6 +121,27 @@ class AcquisitionPriorityService
         ];
     }
 
+    private function signalPoints(string $signal): int
+    {
+        return match ($signal) {
+            'pre_foreclosure' => 18,
+            'tax_delinquent' => 16,
+            'probate' => 14,
+            'code_violation' => 12,
+            'vacant' => 12,
+            'absentee_owner' => 10,
+            'high_equity' => 10,
+            'tired_landlord' => 10,
+            'vacant_land' => 8,
+            default => 3,
+        };
+    }
+
+    private function normalizeSignal(?string $value): string
+    {
+        return str_replace([' ', '-'], '_', strtolower(trim((string) $value)));
+    }
+
     private function normalizedMarkers(Property $property): array
     {
         $markers = $property->distress_markers;
@@ -137,7 +150,7 @@ class AcquisitionPriorityService
         }
 
         return array_values(array_unique(array_filter(array_map(
-            fn ($marker) => str_replace([' ', '-'], '_', strtolower(trim((string) $marker))),
+            fn ($marker) => $this->normalizeSignal($marker),
             $markers
         ))));
     }
