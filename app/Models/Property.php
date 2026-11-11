@@ -125,11 +125,17 @@ class Property extends Model
 
     public function getAssignmentFeeAttribute(): ?float
     {
-        if ($this->our_offer && $this->after_repair_value && $this->repair_estimate) {
-            return $this->our_offer - ($this->after_repair_value * 0.70) - $this->repair_estimate;
+        if (!$this->our_offer || !$this->after_repair_value) {
+            return null;
         }
 
-        return null;
+        $analysis = $this->mao_analysis;
+
+        if (!$analysis || !isset($analysis['buyer_purchase_ceiling'])) {
+            return null;
+        }
+
+        return round(max(0, $analysis['buyer_purchase_ceiling'] - (float) $this->our_offer), 2);
     }
 
     public function getMaoAttribute(): ?float
