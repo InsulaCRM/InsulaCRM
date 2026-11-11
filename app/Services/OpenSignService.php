@@ -113,7 +113,7 @@ class OpenSignService
             }
         }
 
-        $templateId = $options['opensign_template_id'] ?? null;
+        $templateId = $options['opensign_template_id'] ?? $this->defaultTemplateId($deal->tenant_id, $options['document_type'] ?? 'wholesale_contract');
         $endpoint = $templateId ? '/createdocument/' . rawurlencode($templateId) : '/createdocument';
 
         if ($templateId) {
@@ -274,6 +274,24 @@ class OpenSignService
             'certificate_path' => $requestRecord->certificate_path,
             'completed_at' => $requestRecord->completed_at,
         ], $deal->tenant_id);
+    }
+
+    protected function defaultTemplateId(?int $tenantId, string $documentType): ?string
+    {
+        if (!$tenantId) {
+            return null;
+        }
+
+        $templateIds = $this->settings($tenantId)['template_ids'] ?? [];
+        $key = match ($documentType) {
+            'assignment' => 'assignment',
+            'double_close' => 'double_close',
+            'novation' => 'novation',
+            default => 'purchase_agreement',
+        };
+
+        $templateId = $templateIds[$key] ?? null;
+        return $templateId !== '' ? $templateId : null;
     }
 
     protected function request(string $method, string $path, array $payload = [], ?int $tenantId = null): Response
