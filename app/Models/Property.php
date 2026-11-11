@@ -17,6 +17,7 @@ class Property extends Model
         'lead_id',
         'address',
         'city',
+        'county',
         'state',
         'zip_code',
         'property_type',
