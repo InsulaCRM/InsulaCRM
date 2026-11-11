@@ -7,7 +7,6 @@ use App\Models\Deal;
 use App\Models\DealDocument;
 use App\Models\DealSignatureRequest;
 use App\Models\GeneratedDocument;
-use App\Models\Tenant;
 use Illuminate\Http\Client\Response;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Storage;
