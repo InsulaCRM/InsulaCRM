@@ -124,7 +124,8 @@ class LeadIngestController extends Controller
             'notes'      => $this->buildNotes($data),
             'custom_fields' => array_merge(
                 $data['custom_fields'] ?? [],
-                !empty($data['external_id']) ? ['external_id' => $data['external_id']] : []
+                !empty($data['external_id']) ? ['external_id' => $data['external_id']] : [],
+                $this->wholesaleSignalFields($data)
             ),
         ]);
 
@@ -459,6 +460,39 @@ class LeadIngestController extends Controller
         }
 
         return null;
+    }
+
+    /**
+     * Preserve provider-supplied wholesale signals on the seller record so
+     * downstream workflows can audit what drove prioritization.
+     */
+    private function wholesaleSignalFields(array $data): array
+    {
+        $fields = [];
+
+        if (!empty($data['list_types'])) {
+            $fields['list_types'] = array_values(array_unique(array_map(
+                fn ($value) => str_replace([' ', '-'], '_', strtolower(trim((string) $value))),
+                $data['list_types']
+            )));
+        }
+
+        foreach ([
+            'high_equity',
+            'vacant',
+            'absentee_owner',
+            'tax_delinquent',
+            'probate',
+            'pre_foreclosure',
+            'code_violation',
+            'tired_landlord',
+        ] as $flag) {
+            if (array_key_exists($flag, $data)) {
+                $fields[$flag] = (bool) $data[$flag];
+            }
+        }
+
+        return $fields;
     }
 
     /**
