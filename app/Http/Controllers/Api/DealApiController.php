@@ -52,7 +52,7 @@ class DealApiController extends Controller
 
         $deal = Deal::withoutGlobalScopes()
             ->where('tenant_id', $tenant->id)
-            ->with(['lead.property', 'agent', 'documents', 'signatureRequests', 'buyerMatches.buyer'])
+            ->with(['lead.property', 'property', 'agent', 'documents', 'signatureRequests', 'buyerMatches.buyer'])
             ->findOrFail($id);
 
         return response()->json($deal);
@@ -184,6 +184,7 @@ class DealApiController extends Controller
         $isRE = BusinessModeService::isRealEstate($tenant);
 
         $rules = [
+            'property_id'          => 'nullable|integer',
             'stage'                => 'nullable|in:' . implode(',', array_keys(Deal::stages())),
             'contract_price'       => 'nullable|numeric|min:0',
             'earnest_money'        => 'nullable|numeric|min:0',
@@ -241,6 +242,17 @@ class DealApiController extends Controller
         }
 
         $data = $validator->validated();
+
+        if (array_key_exists('property_id', $data)) {
+            if ($data['property_id'] === null) {
+                $data['property_id'] = null;
+            } else {
+                \App\Models\Property::withoutGlobalScopes()
+                    ->where('tenant_id', $tenant->id)
+                    ->where('lead_id', $deal->lead_id)
+                    ->findOrFail($data['property_id']);
+            }
+        }
 
         // Protected wholesale lifecycle stages must be reached through their
         // dedicated state-transition endpoints so contract, buyer, closing,
