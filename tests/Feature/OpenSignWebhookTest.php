@@ -50,9 +50,10 @@ class OpenSignWebhookTest extends TestCase
         $signature = hash_hmac('sha256', $raw, 'test-secret');
 
         $record = new \App\Models\DealSignatureRequest([
-            'id' => 42,
             'status' => 'completed',
         ]);
+
+        $record->setAttribute('id', 42);
 
         $mock = Mockery::mock(OpenSignService::class);
         $mock->shouldReceive('handleWebhook')
