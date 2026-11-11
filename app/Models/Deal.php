@@ -73,6 +73,10 @@ class Deal extends Model
         'contract_review_status',
         'no_buyer_status',
         'extension_termination_review_status',
+        'contract_gate_status',
+        'contract_gate_reason',
+        'contract_gate_blockers',
+        'contract_gate_checked_at',
         'agent_id',
         'title',
         'stage',
@@ -113,6 +117,8 @@ class Deal extends Model
             'emd_required' => 'boolean',
             'buyer_covers_emd' => 'boolean',
             'emd_funding_confirmed' => 'boolean',
+            'contract_gate_blockers' => 'array',
+            'contract_gate_checked_at' => 'datetime',
         ];
     }
 
