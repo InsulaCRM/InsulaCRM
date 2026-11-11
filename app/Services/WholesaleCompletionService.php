@@ -11,6 +11,10 @@ class WholesaleCompletionService
 {
     public function markAssigned(Deal $deal, array $data, int $userId): Deal
     {
+        if ($deal->completion_status === 'assignment_completed' || !empty($deal->assignment_completed_at)) {
+            return $deal->fresh(['committedBuyer']);
+        }
+
         $this->assertReadyForCompletion($deal);
 
         if ($deal->stage !== 'closing' && $deal->stage !== 'buyer_committed' && $deal->stage !== 'assigned') {
@@ -61,6 +65,10 @@ class WholesaleCompletionService
 
     public function markClosedWon(Deal $deal, array $data, int $userId): Deal
     {
+        if ($deal->completion_status === 'closed_won' || !empty($deal->closed_won_at)) {
+            return $deal->fresh(['committedBuyer']);
+        }
+
         $this->assertReadyForCompletion($deal);
 
         if (!in_array($deal->stage, ['assigned', 'closing'], true)) {
