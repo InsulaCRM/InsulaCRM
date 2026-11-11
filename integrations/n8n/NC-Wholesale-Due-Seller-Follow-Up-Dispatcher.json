@@ -24,7 +24,7 @@
     {
       "parameters": {
         "method": "GET",
-        "url": "={{$env.INSULACRM_API_URL}}/api/v1/leads",
+        "url": "={{$env.INSULACRM_API_URL}}/api/v1/leads?per_page=100",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
@@ -49,7 +49,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const payload=$input.first().json; const leads=Array.isArray(payload)?payload:(payload.data||payload.leads||[]); const now=Date.now(); return leads.filter(l=>{const cf=l.custom_fields||{}; const f=cf.nc_wholesale_followup||{}; if(!l.id||!l.phone||l.do_not_contact)return false; if(f.sequence_status!=='active')return false; const due=Date.parse(f.next_follow_up_at||''); return Number.isFinite(due)&&due<=now;}).map(l=>({json:{lead_id:l.id,phone:l.phone,follow_up_days:7,due_at:(l.custom_fields||{}).nc_wholesale_followup.next_follow_up_at}}));"
+        "jsCode": "const payload=$input.first().json; const leads=Array.isArray(payload)?payload:(payload.data||payload.leads||[]); const now=Date.now(); return leads.filter(l=>{const cf=l.custom_fields||{}; const f=cf.nc_wholesale_followup||{}; const r=cf.nc_wholesale_response||{}; if(!l.id||!l.phone||l.do_not_contact)return false; if(f.sequence_status!=='active')return false; if(['NOT_INTERESTED','NOT_FOR_SALE','DNC_STOP'].includes(String(r.classification||'')))return false; const due=Date.parse(f.next_follow_up_at||''); return Number.isFinite(due)&&due<=now;}).map(l=>{const r=(l.custom_fields||{}).nc_wholesale_response||{}; return {json:{lead_id:l.id,phone:l.phone,follow_up_days:Number(r.follow_up_days||7),classification:r.classification||'OTHER',due_at:(l.custom_fields||{}).nc_wholesale_followup.next_follow_up_at}};});"
       },
       "id": "d3",
       "name": "Filter Due Leads",
@@ -75,7 +75,7 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{JSON.stringify({lead_id:$json.lead_id,follow_up_days:$json.follow_up_days})}}",
+        "jsonBody": "={{JSON.stringify({lead_id:$json.lead_id,follow_up_days:$json.follow_up_days,classification:$json.classification})}}",
         "options": {
           "timeout": 30000
         }
