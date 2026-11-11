@@ -120,7 +120,7 @@ class OpenSignService
             unset($payload['file']);
         }
 
-        $response = $this->request('POST', $endpoint, $payload);
+        $response = $this->request('POST', $endpoint, $payload, $deal->tenant_id);
         $body = $response->json();
 
         if (!$response->successful() || empty($body['objectId'])) {
@@ -276,9 +276,9 @@ class OpenSignService
         ], $deal->tenant_id);
     }
 
-    protected function request(string $method, string $path, array $payload = []): Response
+    protected function request(string $method, string $path, array $payload = [], ?int $tenantId = null): Response
     {
-        $settings = $this->settings();
+        $settings = $this->settings($tenantId);
         $baseUrl = rtrim($settings['base_url'] ?: 'https://sandbox.opensignlabs.com/api/v1.2', '/');
 
         return Http::acceptJson()
