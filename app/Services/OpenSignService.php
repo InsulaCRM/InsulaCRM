@@ -196,7 +196,7 @@ class OpenSignService
 
         $requestRecord->update($updates);
 
-        if ($event === 'completed' && !$requestRecord->signed_pdf_path) {
+        if ($event === 'completed' && (empty($requestRecord->signed_pdf_path) || empty($requestRecord->certificate_path))) {
             $this->archiveCompletedDocument($requestRecord, $payload);
         }
 
