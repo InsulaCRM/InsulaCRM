@@ -1,0 +1,182 @@
+{
+  "name": "NC Wholesale - Due Seller Follow-Up Dispatcher",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 15
+            }
+          ]
+        }
+      },
+      "id": "d1",
+      "name": "Every 15 Minutes",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -760,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{$env.INSULACRM_API_URL}}/api/v1/leads",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-API-Key",
+              "value": "={{$env.INSULACRM_API_KEY}}"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "id": "d2",
+      "name": "Load Candidate Leads",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -520,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const payload=$input.first().json; const leads=Array.isArray(payload)?payload:(payload.data||payload.leads||[]); const now=Date.now(); return leads.filter(l=>{const cf=l.custom_fields||{}; const f=cf.nc_wholesale_followup||{}; if(!l.id||!l.phone||l.do_not_contact)return false; if(f.sequence_status!=='active')return false; const due=Date.parse(f.next_follow_up_at||''); return Number.isFinite(due)&&due<=now;}).map(l=>({json:{lead_id:l.id,phone:l.phone,follow_up_days:7,due_at:(l.custom_fields||{}).nc_wholesale_followup.next_follow_up_at}}));"
+      },
+      "id": "d3",
+      "name": "Filter Due Leads",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -280,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{$env.NC_WHOLESALE_FOLLOWUP_WEBHOOK_URL}}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{JSON.stringify({lead_id:$json.lead_id,follow_up_days:$json.follow_up_days})}}",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "id": "d4",
+      "name": "Trigger Follow-Up Engine",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        0,
+        0
+      ],
+      "retryOnFail": true,
+      "maxTries": 2,
+      "waitBetweenTries": 2000
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{$env.INSULACRM_API_URL}}/api/v1/activities",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-API-Key",
+              "value": "={{$env.INSULACRM_API_KEY}}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{JSON.stringify({lead_id:$json.lead_id,type:'note',subject:'Automated follow-up dispatcher',body:'Triggered due seller follow-up workflow at '+new Date().toISOString(),logged_at:new Date().toISOString()})}}",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "id": "d5",
+      "name": "Log Dispatcher Event",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        240,
+        0
+      ],
+      "onError": "continueRegularOutput"
+    }
+  ],
+  "connections": {
+    "Every 15 Minutes": {
+      "main": [
+        [
+          {
+            "node": "Load Candidate Leads",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Load Candidate Leads": {
+      "main": [
+        [
+          {
+            "node": "Filter Due Leads",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filter Due Leads": {
+      "main": [
+        [
+          {
+            "node": "Trigger Follow-Up Engine",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Trigger Follow-Up Engine": {
+      "main": [
+        [
+          {
+            "node": "Log Dispatcher Event",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "nc-wholesale-due-followup-v1",
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "tags": []
+}
