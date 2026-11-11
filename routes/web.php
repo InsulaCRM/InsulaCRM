@@ -10,6 +10,7 @@ use App\Http\Controllers\DncController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\ActivityController;
 use App\Http\Controllers\DealController;
+use App\Http\Controllers\DealArchiveController;
 use App\Http\Controllers\LeadController;
 use App\Http\Controllers\ListController;
 use App\Http\Controllers\PluginController;
@@ -287,6 +288,7 @@ Route::middleware(['auth', 'tenant', 'require2fa'])->group(function () {
     // ── Pipeline / Deals: all except field_scout ─────────────────────
     Route::middleware('role:admin,agent,acquisition_agent,disposition_agent,listing_agent,buyers_agent')->group(function () {
         Route::get('/pipeline/export', [DealController::class, 'export'])->name('deals.export');
+        Route::get('/pipeline/archive', [DealArchiveController::class, 'index'])->name('deals.archive');
         Route::get('/pipeline/intake', [DealController::class, 'intake'])->name('deals.intake');
         Route::get('/pipeline/intake/{lead}', [DealController::class, 'intake'])->name('deals.intake.lead');
         Route::post('/pipeline/intake', [DealController::class, 'storeIntake'])->name('deals.intake.store');
