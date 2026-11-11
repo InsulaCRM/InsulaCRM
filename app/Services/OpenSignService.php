@@ -214,6 +214,25 @@ class OpenSignService
         $disk = Storage::disk(config('filesystems.default', 'local'));
         $directory = $requestRecord->archive_directory ?: 'deals/' . $deal->id . '/executed';
 
+        if ($emitCompletionEvent) {
+            $completionActivityExists = Activity::withoutGlobalScopes()
+                ->where('deal_id', $deal->id)
+                ->where('subject', 'Contract fully executed')
+                ->exists();
+
+            if (!$completionActivityExists) {
+                Activity::withoutGlobalScopes()->create([
+                    'tenant_id' => $deal->tenant_id,
+                    'lead_id' => $deal->lead_id,
+                    'agent_id' => $deal->agent_id,
+                    'type' => 'document',
+                    'subject' => 'Contract fully executed',
+                    'body' => 'OpenSign completed the signature request for deal #' . $deal->id . '. Executed documents were archived under ' . $directory . '.',
+                    'logged_at' => now(),
+                ]);
+            }
+        }
+
         if (empty($requestRecord->signed_pdf_path) && !empty($payload['file'])) {
             $signed = Http::timeout(60)->get($payload['file']);
 
@@ -261,16 +280,6 @@ class OpenSignService
         if (!$emitCompletionEvent) {
             return;
         }
-
-        Activity::withoutGlobalScopes()->create([
-            'tenant_id' => $deal->tenant_id,
-            'lead_id' => $deal->lead_id,
-            'agent_id' => $deal->agent_id,
-            'type' => 'document',
-            'subject' => 'Contract fully executed',
-            'body' => 'OpenSign completed the signature request for deal #' . $deal->id . '. Executed documents were archived under ' . $directory . '.',
-            'logged_at' => now(),
-        ]);
 
         WebhookService::dispatch('deal.contract.executed', [
             'deal_id' => $deal->id,
