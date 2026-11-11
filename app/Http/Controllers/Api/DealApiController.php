@@ -205,6 +205,15 @@ class DealApiController extends Controller
 
         $data = $validator->validated();
 
+        if (($data['stage'] ?? null) === 'under_contract'
+            && !$isRE
+            && ($data['contract_gate_status'] ?? $deal->contract_gate_status) !== 'approved') {
+            return response()->json([
+                'error' => 'Contract Protection Gate approval is required before moving a wholesale deal to under_contract.',
+                'contract_gate_status' => $deal->contract_gate_status,
+            ], 422);
+        }
+
         // Handle stage change
         if (isset($data['stage']) && $data['stage'] !== $deal->stage) {
             $oldStage = $deal->stage;
