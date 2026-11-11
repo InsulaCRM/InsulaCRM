@@ -51,7 +51,7 @@ class DealApiController extends Controller
 
         $deal = Deal::withoutGlobalScopes()
             ->where('tenant_id', $tenant->id)
-            ->with(['lead.property', 'agent', 'documents', 'buyerMatches.buyer'])
+            ->with(['lead.property', 'agent', 'documents', 'signatureRequests', 'buyerMatches.buyer'])
             ->findOrFail($id);
 
         return response()->json($deal);
