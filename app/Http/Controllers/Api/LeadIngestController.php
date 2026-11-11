@@ -274,7 +274,7 @@ class LeadIngestController extends Controller
             ]);
         });
 
-        if ($deal instanceof \\Illuminate\\Http\\JsonResponse) {
+        if ($deal instanceof \Illuminate\Http\JsonResponse) {
             return $deal;
         }
 
