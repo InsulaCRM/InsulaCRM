@@ -46,3 +46,17 @@ The intake stores an attorney-approved template reference; it does not generate 
 ## Current state
 
 This wiring is implemented on feat/nc-wholesale-automation-foundation. No passing CI result is claimed unless GitHub reports one.
+
+## Disposition-ready buyer package
+
+When a wholesale deal changes to `dispositions`, InsulaCRM now dispatches the `deal.disposition.ready` webhook event. Configure that tenant webhook to point to the n8n workflow:
+
+`integrations/n8n/NC-Wholesale-Disposition-Ready-Buyer-Package.json`
+
+The workflow calls:
+
+`GET /api/v1/deals/{deal_id}/disposition-package`
+
+It ranks viable buyer matches using the stored buyer-specific underwriting snapshot, records a disposition-readiness activity, and returns the top buyer plus viable buyer count.
+
+This workflow prepares the disposition package; it does not represent a buyer as committed and does not automatically send buyer outreach.
