@@ -1,0 +1,203 @@
+{
+  "name": "NC Wholesale - Seller Appointment & Offer Readiness",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "nc-wholesale/seller-readiness",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "r1",
+      "name": "Seller Readiness Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -720,
+        0
+      ],
+      "webhookId": "nc-wholesale-seller-readiness"
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{$env.INSULACRM_API_URL}}/api/v1/leads/{{$json.body?.lead_id || $json.lead_id}}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-API-Key",
+              "value": "={{$env.INSULACRM_API_KEY}}"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "id": "r2",
+      "name": "Get Lead",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -480,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const req=$('Seller Readiness Webhook').first().json.body||$('Seller Readiness Webhook').first().json; const lead=$input.first().json; const cf=lead.custom_fields||{}; const response=cf.nc_wholesale_response||{}; const classification=String(req.classification||response.classification||'').toUpperCase(); const property=lead.property||{}; const opp=cf.nc_wholesale_opportunity||{}; const score=Number(opp.opportunity_score||0); const arv=Number(property.after_repair_value||property.estimated_value||opp.arv||0); const repairs=Number(property.repair_estimate||opp.repair_estimate||0); const asking=Number(property.asking_price||opp.asking_price||0); const mao=arv>0 ? (arv*0.70)-repairs : null; const spread=mao!==null&&asking>0 ? mao-asking : null; const callClasses=['MOTIVATED','INTERESTED','CALLBACK','PRICE_OBJECTION']; const appointmentReady=callClasses.includes(classification)&&!lead.do_not_contact&&(score>=55||['MOTIVATED','INTERESTED','CALLBACK'].includes(classification)); const offerInputs={arv:arv||null,repair_estimate:repairs||null,asking_price:asking||null,mao:mao!==null?Math.round(mao*100)/100:null,estimated_spread:spread!==null?Math.round(spread*100)/100:null}; const missing=[]; if(!arv)missing.push('after_repair_value'); if(repairs<0)missing.push('repair_estimate'); if(!asking)missing.push('asking_price'); const offerReady=appointmentReady&&missing.length===0&&spread!==null&&spread>0; const action=lead.do_not_contact?'do_not_contact':offerReady?'prepare_offer':appointmentReady?'schedule_call':'nurture'; const readiness={appointment_ready:appointmentReady,offer_ready:offerReady,action,classification,opportunity_score:score,offer_inputs:offerInputs,missing_inputs:missing,ready_at:new Date().toISOString(),version:'nc-v1'}; return [{json:{lead_id:Number(lead.id||req.lead_id||0),readiness,activity_body:JSON.stringify(readiness)}}];"
+      },
+      "id": "r3",
+      "name": "Calculate Readiness",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -220,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "method": "PUT",
+        "url": "={{$env.INSULACRM_API_URL}}/api/v1/leads/{{$json.lead_id}}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-API-Key",
+              "value": "={{$env.INSULACRM_API_KEY}}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{JSON.stringify({custom_fields:{nc_wholesale_readiness:$json.readiness}})}}",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "id": "r4",
+      "name": "Persist Readiness",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        40,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{$env.INSULACRM_API_URL}}/api/v1/activities",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-API-Key",
+              "value": "={{$env.INSULACRM_API_KEY}}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{JSON.stringify({lead_id:$json.lead_id,type:'task',subject:$json.readiness.action==='prepare_offer'?'Offer readiness completed':$json.readiness.action==='schedule_call'?'Seller call readiness completed':'Seller readiness updated',body:$json.activity_body,logged_at:$json.readiness.ready_at})}}",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "id": "r5",
+      "name": "Log Readiness Activity",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        300,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{JSON.stringify({success:true,lead_id:$json.lead_id,readiness:$json.readiness})}}",
+        "options": {}
+      },
+      "id": "r6",
+      "name": "Respond",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        560,
+        0
+      ]
+    }
+  ],
+  "connections": {
+    "Seller Readiness Webhook": {
+      "main": [
+        [
+          {
+            "node": "Get Lead",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Lead": {
+      "main": [
+        [
+          {
+            "node": "Calculate Readiness",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Calculate Readiness": {
+      "main": [
+        [
+          {
+            "node": "Persist Readiness",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Persist Readiness": {
+      "main": [
+        [
+          {
+            "node": "Log Readiness Activity",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Log Readiness Activity": {
+      "main": [
+        [
+          {
+            "node": "Respond",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "saveDataErrorExecution": "all",
+    "saveDataSuccessExecution": "all"
+  },
+  "versionId": "nc-wholesale-seller-readiness-v1",
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "tags": []
+}
