@@ -101,8 +101,8 @@ class BusinessModeServiceTest extends TestCase
         $this->assertCount(11, BusinessModeService::REALESTATE_STAGES);
     }
 
-    public function test_wholesale_stages_constant_has_10_stages(): void
+    public function test_wholesale_stages_constant_has_current_stages(): void
     {
-        $this->assertCount(10, BusinessModeService::WHOLESALE_STAGES);
+        $this->assertCount(15, BusinessModeService::WHOLESALE_STAGES);
     }
 }
