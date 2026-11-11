@@ -2,19 +2,18 @@
   "name": "NC Wholesale - InsulaCRM Lead Ingest",
   "nodes": [
     {
-      "parameters": {},
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "nc-wholesale/lead",
+        "responseMode": "responseNode",
+        "options": {}
+      },
       "id": "webhook-trigger",
       "name": "Inbound Lead",
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 2,
       "position": [0, 0],
-      "webhookId": "nc-wholesale-lead-ingest",
-      "parameters": {
-        "httpMethod": "POST",
-        "path": "nc-wholesale/lead",
-        "responseMode": "onReceived",
-        "options": {}
-      }
+      "webhookId": "nc-wholesale-lead-ingest"
     },
     {
       "parameters": {
