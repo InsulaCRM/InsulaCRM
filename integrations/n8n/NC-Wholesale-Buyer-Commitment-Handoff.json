@@ -1,0 +1,186 @@
+{
+  "name": "NC Wholesale - Buyer Commitment Handoff",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "nc-wholesale/buyer-commitment",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "c1",
+      "name": "Buyer Commitment Trigger",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -700,
+        0
+      ],
+      "webhookId": "nc-wholesale-buyer-commitment"
+    },
+    {
+      "parameters": {
+        "jsCode": "const b=$input.first().json.body?.data||$input.first().json.body||$input.first().json; const confirmed=Boolean(b.buyer_confirmation===true||String(b.buyer_confirmation).toLowerCase()==='true'); return [{json:{...b,buyer_confirmation:confirmed,commitment_status:'committed'}}];"
+      },
+      "id": "c2",
+      "name": "Normalize Confirmation",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -460,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "leftValue": "={{$json.buyer_confirmation}}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "c3",
+      "name": "Explicit Confirmation?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        -220,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{$env.INSULACRM_API_URL}}/api/v1/deals/{{$json.deal_id}}/buyer-commitment",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-API-Key",
+              "value": "={{$env.INSULACRM_API_KEY}}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{JSON.stringify({buyer_id:$json.buyer_id,match_id:$json.match_id,commitment_status:'committed',buyer_confirmation:true,assignment_fee:$json.assignment_fee})}}",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "id": "c4",
+      "name": "Commit Buyer in CRM",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        20,
+        -80
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{JSON.stringify({success:true,message:'Buyer commitment submitted for CRM validation.'})}}",
+        "options": {}
+      },
+      "id": "c5",
+      "name": "Respond Accepted",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        260,
+        -80
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{JSON.stringify({success:false,error:'Explicit buyer confirmation is required. No commitment was recorded.'})}}",
+        "options": {}
+      },
+      "id": "c6",
+      "name": "Respond Rejected",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        20,
+        120
+      ]
+    }
+  ],
+  "connections": {
+    "Buyer Commitment Trigger": {
+      "main": [
+        [
+          {
+            "node": "Normalize Confirmation",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize Confirmation": {
+      "main": [
+        [
+          {
+            "node": "Explicit Confirmation?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Explicit Confirmation?": {
+      "main": [
+        [
+          {
+            "node": "Commit Buyer in CRM",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respond Rejected",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Commit Buyer in CRM": {
+      "main": [
+        [
+          {
+            "node": "Respond Accepted",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "buyer-commitment-v1"
+}
