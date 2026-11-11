@@ -132,44 +132,51 @@ class DealApiController extends Controller
         $data['stage'] = $data['stage'] ?? \App\Services\BusinessModeService::getDefaultStage();
         $data['stage_changed_at'] = now();
 
-        // Prevent multiple active deals for the same lead while preserving
-        // closed deal history.
-        $activeDealExists = Deal::withoutGlobalScopes()
-            ->where('tenant_id', $tenant->id)
-            ->where('lead_id', $data['lead_id'])
-            ->whereNotIn('stage', ['closed_won', 'closed_lost'])
-            ->exists();
+        $deal = DB::transaction(function () use ($tenant, $data) {
+            // Lock the lead row before checking for an active deal. This makes
+            // duplicate-deal prevention safe when two requests arrive at once.
+            $lead = \App\Models\Lead::withoutGlobalScopes()
+                ->where('tenant_id', $tenant->id)
+                ->lockForUpdate()
+                ->findOrFail($data['lead_id']);
 
-        if ($activeDealExists) {
-            return response()->json([
-                'error' => 'An active deal already exists for this lead. Close or otherwise resolve the existing deal before creating another.',
-            ], 409);
-        }
-
-        // Verify lead belongs to tenant
-        $lead = \App\Models\Lead::withoutGlobalScopes()
-            ->where('tenant_id', $tenant->id)
-            ->findOrFail($data['lead_id']);
-
-        if (isset($data['property_id'])) {
-            $property = \App\Models\Property::withoutGlobalScopes()
+            $activeDealExists = Deal::withoutGlobalScopes()
                 ->where('tenant_id', $tenant->id)
                 ->where('lead_id', $lead->id)
-                ->findOrFail($data['property_id']);
-        } else {
-            $property = $lead->property()->first();
-            if ($property) {
-                $data['property_id'] = $property->id;
+                ->whereNotIn('stage', ['closed_won', 'closed_lost'])
+                ->exists();
+
+            if ($activeDealExists) {
+                return response()->json([
+                    'error' => 'An active deal already exists for this lead. Close or otherwise resolve the existing deal before creating another.',
+                ], 409);
             }
+
+            if (isset($data['property_id'])) {
+                \App\Models\Property::withoutGlobalScopes()
+                    ->where('tenant_id', $tenant->id)
+                    ->where('lead_id', $lead->id)
+                    ->findOrFail($data['property_id']);
+            } else {
+                $property = $lead->property()->first();
+                if ($property) {
+                    $data['property_id'] = $property->id;
+                }
+            }
+
+            if (empty($data['title'])) {
+                $data['title'] = $lead->full_name . ' Deal';
+            }
+
+            $deal = Deal::withoutGlobalScopes()->create($data);
+            AuditLog::log('deal.created_via_api', $deal);
+
+            return $deal;
+        });
+
+        if ($deal instanceof \Illuminate\Http\JsonResponse) {
+            return $deal;
         }
-
-        if (empty($data['title'])) {
-            $data['title'] = $lead->full_name . ' Deal';
-        }
-
-        $deal = Deal::withoutGlobalScopes()->create($data);
-
-        AuditLog::log('deal.created_via_api', $deal);
 
         return response()->json(['success' => true, 'deal_id' => $deal->id], 201);
     }
