@@ -22,6 +22,119 @@ use Illuminate\Support\Facades\Storage;
 
 class DealController extends Controller
 {
+    public function intake(Request $request, ?\App\Models\Lead $lead = null)
+    {
+        $this->authorize('create', Deal::class);
+
+        $leads = $lead ? collect([$lead]) : \App\Models\Lead::with('property')
+            ->where('tenant_id', auth()->user()->tenant_id)
+            ->whereNotIn('status', ['dead'])
+            ->latest()
+            ->limit(250)
+            ->get();
+
+        $states = collect([
+            'AL'=>'Alabama','AK'=>'Alaska','AZ'=>'Arizona','AR'=>'Arkansas','CA'=>'California','CO'=>'Colorado','CT'=>'Connecticut','DE'=>'Delaware','FL'=>'Florida','GA'=>'Georgia','HI'=>'Hawaii','ID'=>'Idaho','IL'=>'Illinois','IN'=>'Indiana','IA'=>'Iowa','KS'=>'Kansas','KY'=>'Kentucky','LA'=>'Louisiana','ME'=>'Maine','MD'=>'Maryland','MA'=>'Massachusetts','MI'=>'Michigan','MN'=>'Minnesota','MS'=>'Mississippi','MO'=>'Missouri','MT'=>'Montana','NE'=>'Nebraska','NV'=>'Nevada','NH'=>'New Hampshire','NJ'=>'New Jersey','NM'=>'New Mexico','NY'=>'New York','NC'=>'North Carolina','ND'=>'North Dakota','OH'=>'Ohio','OK'=>'Oklahoma','OR'=>'Oregon','PA'=>'Pennsylvania','RI'=>'Rhode Island','SC'=>'South Carolina','SD'=>'South Dakota','TN'=>'Tennessee','TX'=>'Texas','UT'=>'Utah','VT'=>'Vermont','VA'=>'Virginia','WA'=>'Washington','WV'=>'West Virginia','WI'=>'Wisconsin','WY'=>'Wyoming',
+        ]);
+
+        $structures = ['assignment' => __('Assignment'), 'double_close' => __('Double Close'), 'novation' => __('Novation')];
+        $templates = [
+            'NC-PURCHASE-v1-ATTORNEY-APPROVED' => __('NC Purchase & Sale'),
+            'NC-ASSIGNMENT-v1-ATTORNEY-APPROVED' => __('NC Assignment'),
+            'NC-DOUBLE-CLOSE-v1-ATTORNEY-APPROVED' => __('NC Double Close'),
+            'NC-NOVATION-v1-ATTORNEY-APPROVED' => __('NC Novation'),
+        ];
+        $closingTypes = [
+            'closing_attorney' => __('Closing Attorney'),
+            'title_company' => __('Title Company'),
+            'escrow_company' => __('Escrow Company'),
+            'settlement_company' => __('Settlement Company'),
+            'other_permitted' => __('Other Permitted'),
+        ];
+
+        return view('deals.intake', compact('lead', 'leads', 'states', 'structures', 'templates', 'closingTypes'));
+    }
+
+    public function storeIntake(Request $request)
+    {
+        $this->authorize('create', Deal::class);
+
+        $data = $request->validate([
+            'lead_id' => 'required|exists:leads,id',
+            'title' => 'required|string|max:255',
+            'property_state' => 'required|string|size:2',
+            'property_county' => 'nullable|string|max:255',
+            'contract_price' => 'nullable|numeric|min:0',
+            'buyer_type' => 'required|in:individual,entity',
+            'buyer_legal_name' => 'nullable|string|max:255',
+            'transaction_structure' => 'required|in:assignment,double_close,novation',
+            'attorney_approved_template_id' => 'required|string|max:255',
+            'executed_contract_status' => 'required|in:not_executed,pending_review,executed',
+            'assignment_rights_confirmed' => 'nullable|boolean',
+            'earnest_money' => 'nullable|numeric|min:0',
+            'emd_required' => 'nullable|boolean',
+            'emd_source' => 'nullable|in:wholesaler,end_buyer,other_approved',
+            'buyer_covers_emd' => 'nullable|boolean',
+            'emd_funding_confirmed' => 'nullable|boolean',
+            'emd_exception_reason' => 'nullable|string|max:500',
+            'closing_provider_type' => 'nullable|in:closing_attorney,title_company,escrow_company,settlement_company,other_permitted',
+            'buyer_preferred_closing_provider' => 'nullable|string|max:255',
+            'seller_preferred_closing_provider' => 'nullable|string|max:255',
+            'confirmed_closing_provider' => 'nullable|string|max:255',
+            'contract_review_status' => 'nullable|in:pending,approved,needs_attention',
+            'no_buyer_status' => 'nullable|in:not_applicable,active,review,extension_review,termination_review',
+            'extension_termination_review_status' => 'nullable|in:not_needed,pending,approved',
+            'contract_date' => 'nullable|date',
+            'due_diligence_end_date' => 'nullable|date',
+            'closing_date' => 'nullable|date',
+        ]);
+
+        if (($data['earnest_money'] ?? 0) > 50 && empty($data['emd_exception_reason'])) {
+            return back()->withInput()->withErrors(['earnest_money' => __('EMD above $50 requires an exception reason.')]);
+        }
+
+        if (($data['transaction_structure'] ?? null) === 'assignment' && ($data['assignment_rights_confirmed'] ?? null) !== true) {
+            return back()->withInput()->withErrors(['assignment_rights_confirmed' => __('Assignment requires confirmed assignment rights before contract handoff.')]);
+        }
+
+        $lead = \App\Models\Lead::findOrFail($data['lead_id']);
+        if ($lead->tenant_id !== auth()->user()->tenant_id) {
+            abort(403);
+        }
+
+        $activeDeal = Deal::where('lead_id', $lead->id)
+            ->whereNotIn('stage', ['closed_won', 'closed_lost', 'termination_review'])
+            ->first();
+        if ($activeDeal) {
+            return redirect()->route('deals.show', $activeDeal)->with('info', __('An active deal already exists for this lead.'));
+        }
+
+        $deal = Deal::create([
+            'tenant_id' => auth()->user()->tenant_id,
+            'lead_id' => $lead->id,
+            'agent_id' => auth()->id(),
+            'stage' => 'offer_presented',
+            ...$data,
+        ]);
+
+        \App\Models\Activity::create([
+            'tenant_id' => auth()->user()->tenant_id,
+            'lead_id' => $lead->id,
+            'deal_id' => $deal->id,
+            'agent_id' => auth()->id(),
+            'type' => 'note',
+            'subject' => __('Deal / contract intake completed'),
+            'body' => __('Structure: :structure; template: :template; closing: :closing', [
+                'structure' => $data['transaction_structure'],
+                'template' => $data['attorney_approved_template_id'],
+                'closing' => $data['closing_provider_type'] ?? 'not selected',
+            ]),
+            'logged_at' => now(),
+        ]);
+
+        return redirect()->route('deals.show', $deal)->with('success', __('Deal intake saved. Contract gate remains required before Under Contract.'));
+    }
+
     public function pipeline(Request $request)
     {
         $this->authorize('viewAny', Deal::class);
