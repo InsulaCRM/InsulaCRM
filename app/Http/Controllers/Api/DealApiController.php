@@ -183,6 +183,10 @@ class DealApiController extends Controller
             'contract_review_status' => 'nullable|in:pending,approved,needs_attention',
             'no_buyer_status' => 'nullable|in:not_applicable,active,review,extension_review,termination_review',
             'extension_termination_review_status' => 'nullable|in:not_needed,pending,approved',
+            'contract_gate_status' => 'nullable|in:pending,approved,blocked',
+            'contract_gate_reason' => 'nullable|string|max:2000',
+            'contract_gate_blockers' => 'nullable|array',
+            'contract_gate_checked_at' => 'nullable|date',
             'due_diligence_end_date' => 'nullable|date',
         ];
 
