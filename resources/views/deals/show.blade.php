@@ -43,6 +43,8 @@
 
         @include('deals._contract_protection_gate')
 
+        @include('deals._opensign')
+
         <!-- Deal Info Card -->
         <div class="card mb-3">
             <div class="card-header">
