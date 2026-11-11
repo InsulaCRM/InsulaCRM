@@ -142,7 +142,7 @@ class MotivationScoreServiceTest extends TestCase
             'type' => 'tax_delinquent',
             'record_count' => 1,
         ]);
-        $lead->lists()->attach($list->id);
+        $lead->lists()->attach($list->id, ['tenant_id' => $this->tenant->id]);
 
         $score = $this->service->recalculate($lead);
 
