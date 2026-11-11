@@ -18,6 +18,10 @@ class OpenSignSettingsTest extends TestCase
             'opensign_webhook_secret' => 'tenant-webhook-secret',
             'opensign_sender_name' => 'Test Company',
             'opensign_sender_email' => 'sign@example.com',
+            'opensign_template_purchase_agreement' => 'tpl-purchase',
+            'opensign_template_assignment' => 'tpl-assignment',
+            'opensign_template_double_close' => 'tpl-double',
+            'opensign_template_novation' => 'tpl-novation',
         ]);
 
         $response->assertRedirect(route('settings.index', ['tab' => 'integrations']));
@@ -27,6 +31,10 @@ class OpenSignSettingsTest extends TestCase
         $this->assertSame('https://sandbox.opensignlabs.com/api/v1.2', $options['base_url']);
         $this->assertSame('Test Company', $options['sender_name']);
         $this->assertSame('sign@example.com', $options['sender_email']);
+        $this->assertSame('tpl-purchase', $options['template_ids']['purchase_agreement']);
+        $this->assertSame('tpl-assignment', $options['template_ids']['assignment']);
+        $this->assertSame('tpl-double', $options['template_ids']['double_close']);
+        $this->assertSame('tpl-novation', $options['template_ids']['novation']);
         $this->assertNotSame('tenant-api-token', $options['api_token']);
         $this->assertNotSame('tenant-webhook-secret', $options['webhook_secret']);
         $this->assertSame('tenant-api-token', decrypt($options['api_token']));
