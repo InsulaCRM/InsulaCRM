@@ -109,7 +109,7 @@ class WholesaleCompletionService
                 'closed_won_at' => now(),
                 'final_assignment_fee' => array_key_exists('final_assignment_fee', $data)
                     ? $data['final_assignment_fee']
-                    : $deal->final_assignment_fee ?: $deal->assignment_fee,
+                    : ($deal->final_assignment_fee ?: $deal->assignment_fee),
                 'final_closing_amount' => $data['final_closing_amount'] ?? $deal->final_closing_amount,
                 'closing_result' => $data['closing_result'] ?? 'closed_won',
                 'closing_result_notes' => $data['closing_result_notes'] ?? null,
