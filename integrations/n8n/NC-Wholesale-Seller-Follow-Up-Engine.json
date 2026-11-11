@@ -68,7 +68,7 @@
           "conditions": [
             {
               "id": "eligible",
-              "leftValue": "={{$json.eligible}}",
+              "leftValue": "={{$json.eligible && $('Run Seller Contact Gate').first().json.allowed_to_contact}}",
               "rightValue": true,
               "operator": {
                 "type": "boolean",
@@ -87,6 +87,26 @@
       "position": [
         120,
         0
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{$env.NC_WHOLESALE_CONTACT_GATE_WEBHOOK_URL}}",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{JSON.stringify({phone:$json.phone,do_not_contact:$json.blocked,status:'',timezone:$json.timezone||'America/New_York'})}}",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "id": "f4g",
+      "name": "Run Seller Contact Gate",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        120,
+        180
       ]
     },
     {
@@ -270,7 +290,7 @@
       "main": [
         [
           {
-            "node": "Eligible To Send?",
+            "node": "Run Seller Contact Gate",
             "type": "main",
             "index": 0
           }
@@ -340,6 +360,17 @@
         [
           {
             "node": "Respond Sent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Run Seller Contact Gate": {
+      "main": [
+        [
+          {
+            "node": "Eligible To Send?",
             "type": "main",
             "index": 0
           }
