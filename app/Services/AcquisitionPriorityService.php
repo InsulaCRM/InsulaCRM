@@ -16,6 +16,10 @@ class AcquisitionPriorityService
         $property = $lead->property;
         $seenSignals = [];
 
+        // Real LeadList records remain the canonical list source, but external
+        // providers can also supply list_types and boolean wholesale signals
+        // during ingestion. Treat those signals as equivalent acquisition
+        // evidence while preventing duplicate scoring across sources.
         foreach ($lead->lists as $list) {
             $signal = $this->normalizeSignal($list->type);
             if ($signal === '' || isset($seenSignals[$signal])) {
@@ -25,6 +29,37 @@ class AcquisitionPriorityService
             $seenSignals[$signal] = true;
             $score += $this->signalPoints($signal);
             $reasons[] = $this->label($signal);
+        }
+
+        $providerListTypes = data_get($lead->custom_fields, 'list_types', []);
+        if (is_array($providerListTypes)) {
+            foreach ($providerListTypes as $providerType) {
+                $signal = $this->normalizeSignal($providerType);
+                if ($signal === '' || isset($seenSignals[$signal])) {
+                    continue;
+                }
+
+                $seenSignals[$signal] = true;
+                $score += $this->signalPoints($signal);
+                $reasons[] = $this->label($signal);
+            }
+        }
+
+        foreach ([
+            'high_equity',
+            'vacant',
+            'absentee_owner',
+            'tax_delinquent',
+            'probate',
+            'pre_foreclosure',
+            'code_violation',
+            'tired_landlord',
+        ] as $flag) {
+            if ((bool) data_get($lead->custom_fields, $flag, false) && !isset($seenSignals[$flag])) {
+                $seenSignals[$flag] = true;
+                $score += $this->signalPoints($flag);
+                $reasons[] = $this->label($flag);
+            }
         }
 
         if ($property) {
